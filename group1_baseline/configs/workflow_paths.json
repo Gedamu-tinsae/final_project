@@ -13,6 +13,7 @@
   "stage2_input_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/stage2_input.json",
   "stage2_tokenized_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/alignment_tokenized_stage2.json",
   "stage2_manifest_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/stage2_manifest.json",
+  "stage2_manifest_smoke_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/stage2_manifest_smoke.json",
 
   "clip_feature_dir": "${PROJECT_ROOT}/data/processed/clip_embeddings",
 
