@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .acquire_coco import acquire_coco_2017, coco_files_status
 from .prepare_stage1_dataset import build_alignment
 from .convert_alignment_format import convert_alignment_rows
 
@@ -39,3 +40,31 @@ def ensure_stage1_chat_rows(
     chat_path.write_text(json.dumps(chat_rows, indent=2), encoding="utf-8")
 
     return alignment, chat_rows, "generated"
+
+
+def run_stage1_data_prep(
+    project_root: Path,
+    coco_json_path: Path,
+    alignment_path: Path,
+    chat_path: Path,
+    *,
+    seed: int = 42,
+    overwrite: bool = False,
+    download: bool = True,
+    extract: bool = True,
+) -> tuple[list[dict], list[dict], str, dict[str, Path]]:
+    """Run full Stage-1 prep: acquisition/status + alignment/chat generation.
+
+    Returns:
+      alignment, chat_rows, mode, status
+    """
+    acquire_coco_2017(project_root, download=download, extract=extract)
+    status = coco_files_status(project_root)
+    alignment, chat_rows, mode = ensure_stage1_chat_rows(
+        coco_json_path=coco_json_path,
+        alignment_path=alignment_path,
+        chat_path=chat_path,
+        seed=seed,
+        overwrite=overwrite,
+    )
+    return alignment, chat_rows, mode, status
