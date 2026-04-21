@@ -1,0 +1,5 @@
+# Backward-compatible default install:
+# - core modules for src/
+# - notebook helpers for interactive workflow
+-r requirements-core.txt
+-r requirements-notebook.txt

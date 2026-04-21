@@ -1,0 +1,9 @@
+python-dotenv
+kagglehub
+nest_asyncio
+ipywidgets
+wandb
+tensorflow
+tensorflow_datasets
+tensorboardX
+grain

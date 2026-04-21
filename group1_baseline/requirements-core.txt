@@ -1,0 +1,9 @@
+numpy
+Pillow
+transformers
+huggingface_hub
+datasets
+jax
+flax
+optax
+humanize

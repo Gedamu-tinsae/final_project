@@ -1,0 +1,20 @@
+{
+  "coco_json": "${PROJECT_ROOT}/data/raw/annotations/captions_train2017.json",
+  "image_root": "${PROJECT_ROOT}/data/raw/train2017",
+
+  "stage1_alignment_json": "${PROJECT_ROOT}/data/processed/stage1_alignment/alignment.json",
+  "stage1_chat_json": "${PROJECT_ROOT}/data/processed/stage1_alignment/alignment_chat.json",
+  "stage1_tokenized_json": "${PROJECT_ROOT}/data/processed/stage1_alignment/alignment_tokenized.json",
+  "stage1_manifest_json": "${PROJECT_ROOT}/data/processed/stage1_alignment/stage1_manifest.json",
+
+  "stage2_input_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/stage2_input.json",
+  "stage2_tokenized_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/alignment_tokenized_stage2.json",
+  "stage2_manifest_json": "${PROJECT_ROOT}/data/processed/stage2_finetuning/stage2_manifest.json",
+
+  "clip_feature_dir": "${PROJECT_ROOT}/data/processed/clip_embeddings",
+
+  "artifacts_dir": "${PROJECT_ROOT}/artifacts",
+  "stage1_projector_state": "${PROJECT_ROOT}/artifacts/projector_stage1.pkl",
+  "stage2_projector_state": "${PROJECT_ROOT}/artifacts/projector_stage2.pkl",
+  "stage2_llama_state": "${PROJECT_ROOT}/artifacts/llama_stage2.pkl"
+}

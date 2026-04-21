@@ -1,0 +1,3 @@
+# TPU / Tunix ecosystem dependencies used by model_internals.
+git+https://github.com/google/tunix
+git+https://github.com/google/qwix
