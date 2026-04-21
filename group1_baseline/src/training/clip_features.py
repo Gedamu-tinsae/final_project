@@ -39,24 +39,32 @@ def precompute_clip_features_jitted(clip_bundle, tokenized_json, image_root, out
 
     get_features_compiled = make_clip_feature_fn(clip_bundle)
 
-    print(f"Extracting features for {len(data)} images...")
-    for i, sample in enumerate(data):
+    # Dataset rows can repeat the same image many times. Precompute each image once.
+    unique_images = []
+    seen = set()
+    for sample in data:
+        image_name = sample["image"]
+        if image_name not in seen:
+            seen.add(image_name)
+            unique_images.append(image_name)
+
+    print(f"Extracting features for {len(unique_images)} unique images...")
+    for i, image_name in enumerate(unique_images):
         try:
-            image_path = os.path.join(image_root, sample["image"])
+            image_path = os.path.join(image_root, image_name)
             img = Image.open(image_path).convert("RGB")
             clip_inputs = clip_bundle.processor(images=img, return_tensors="np")
             pixel_values = jnp.array(clip_inputs["pixel_values"])
             hidden_states_penultimate = get_features_compiled(pixel_values)
             vision_feats = np.array(hidden_states_penultimate[0])
 
-            save_path = os.path.join(output_dir, sample["image"].replace(".jpg", ".npy"))
+            save_path = os.path.join(output_dir, image_name.replace(".jpg", ".npy"))
             if os.path.exists(save_path) and not overwrite:
-                raise FileExistsError(
-                    f"Feature file exists: {save_path}. Delete it first or set overwrite=True."
-                )
+                # In case of partial rerun with overwrite=False, leave existing file untouched.
+                continue
             np.save(save_path, vision_feats)
 
             if i % 100 == 0:
-                print(f"Processed {i}/{len(data)}...")
+                print(f"Processed {i}/{len(unique_images)}...")
         except Exception as e:
-            print(f"Error on {sample['image']}: {e}")
+            print(f"Error on {image_name}: {e}")

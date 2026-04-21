@@ -1,6 +1,6 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 4:56:40 PM
+**Generated:** 4/21/2026, 6:27:07 PM
 **Root Path:** `/root/final_project`
 
 ```
@@ -10,9 +10,19 @@
 │   │   └── ⚙️ workflow_paths.json
 │   ├── 📁 data
 │   │   ├── 📁 processed
-│   │   │   └── 📁 stage1_alignment
-│   │   │       ├── ⚙️ alignment.json
-│   │   │       └── ⚙️ alignment_chat.json
+│   │   │   ├── 📁 clip_embeddings
+│   │   │   │   ├── 📄 000000000775.npy
+│   │   │   │   ├── 📄 000000002881.npy
+│   │   │   │   ├── 📄 000000003035.npy...
+│   │   │   │   ├── 📄 000000580388.npy
+│   │   │   │   ├── 📄 000000580543.npy
+│   │   │   │   └── 📄 000000581177.npy
+│   │   │   ├── 📁 stage1_alignment
+│   │   │   │   ├── ⚙️ alignment.json
+│   │   │   │   ├── ⚙️ alignment_chat.json
+│   │   │   │   └── ⚙️ alignment_tokenized.json
+│   │   │   └── 📁 stage2_finetuning
+│   │   │       └── ⚙️ alignment_tokenized_stage2.json
 │   │   └── 📁 raw
 │   │       ├── 📁 annotations
 │   │       │   ├── ⚙️ captions_train2017.json
@@ -31,6 +41,8 @@
 │   │   ├── 📄 LLaVA_Baseline_Workflow.ipynb
 │   │   └── 📄 LLaVA_Public.ipynb
 │   ├── 📁 notes
+│   │   ├── 📝 DATA_DIRECTORY_GUIDE.md
+│   │   ├── 📝 HF_GATED_MODEL_ACCESS.md
 │   │   ├── 📝 HF_SETUP_STEPS.md
 │   │   └── 📝 MIGRATION_TRACE.md
 │   ├── 📁 scripts
@@ -39,7 +51,8 @@
 │   │   ├── 📁 data_prep
 │   │   │   ├── 🐍 acquire_coco.py
 │   │   │   ├── 🐍 convert_alignment_format.py
-│   │   │   └── 🐍 prepare_stage1_dataset.py
+│   │   │   ├── 🐍 prepare_stage1_dataset.py
+│   │   │   └── 🐍 stage1_pipeline.py
 │   │   ├── 📁 model_internals
 │   │   │   ├── 🐍 model.py
 │   │   │   └── 🐍 params.py
@@ -53,12 +66,14 @@
 │   │   │   ├── 🐍 projector.py
 │   │   │   ├── 🐍 stage1.py
 │   │   │   ├── 🐍 stage2.py
-│   │   │   └── 🐍 tokenization.py
+│   │   │   ├── 🐍 tokenization.py
+│   │   │   └── 🐍 tokenization_pipeline.py
 │   │   ├── 📁 training_manifests
 │   │   │   ├── 🐍 build_stage1_manifest.py
 │   │   │   └── 🐍 build_stage2_manifest.py
 │   │   ├── 📁 vision_features
 │   │   │   ├── 🐍 clip_helpers.py
+│   │   │   ├── 🐍 feature_pipeline.py
 │   │   │   └── 🐍 precompute_clip_features.py
 │   │   └── 🐍 config_loader.py
 │   ├── ⚙️ .gitignore
