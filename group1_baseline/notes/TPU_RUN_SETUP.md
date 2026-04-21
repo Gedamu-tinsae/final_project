@@ -11,12 +11,29 @@ Use one repo copy as canonical (recommended: your latest remote-server repo), th
 
 Do not manually copy random files between machines once Git is set.
 
-## 2) SSH from local to TPU VM
+## 2) SSH from local (important key step for `tunix-vm`)
 
-Make sure TPU host exists in your local SSH config, then connect:
+If `ssh tunix-vm` fails with `Permission denied (publickey)`, re-add your public key
+to **Compute Engine -> Metadata -> SSH Keys** first.
+
+Create key (if needed):
 
 ```bash
-ssh <your-tpu-host-alias>
+ssh-keygen -t ed25519 -N '""' -f "$HOME/.ssh/gke-kiya-key" -C "kiya"
+```
+
+Print public key and copy full line:
+
+```bash
+cat "$HOME/.ssh/gke-kiya-key.pub"
+```
+
+Then make sure your local SSH config uses that key for `tunix-vm`.
+
+Connect:
+
+```bash
+ssh tunix-vm
 ```
 
 ## 3) Clone or pull repo on TPU VM
@@ -103,3 +120,6 @@ When you edit code/notebook logic on TPU VM:
 Run compute where hardware lives:
 - TPU jobs run on TPU VM
 - local machine is for editing/SSH control
+
+Note: in this class setup, `tunix-vm` currently lands on a GKE/COS node
+(`gke-tunix-pathways-...`). SSH works for command runs, but it is not a normal Ubuntu dev VM.
