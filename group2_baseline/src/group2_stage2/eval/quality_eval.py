@@ -6,7 +6,7 @@ import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .common import load_jsonl, write_json
+from ..common import load_jsonl, write_json
 
 
 def _safe_mean(xs: list[float]) -> float | None:
@@ -66,7 +66,7 @@ def build_dataset_quality_diagnostics(stage2_root: Path, all_variants: list[str]
         diagnostics.append(variant_summary)
 
     out = {"mode": "generated", "all_variants": all_variants, "diagnostics": diagnostics}
-    write_json(out_path, out, overwrite=True)
+    write_json(out_path, out, overwrite=overwrite)
     return out
 
 
@@ -120,7 +120,7 @@ def build_qualitative_samples_pack(
         samples.append(sample)
 
     out = {"mode": "generated", "all_variants": all_variants, "num_samples": len(samples), "samples": samples}
-    write_json(out_path, out, overwrite=True)
+    write_json(out_path, out, overwrite=overwrite)
     return out
 
 
@@ -165,5 +165,5 @@ def build_pairwise_judge_requests(
             )
 
     out = {"mode": "generated", "baseline_variant": baseline_variant, "requests": requests}
-    write_json(out_path, out, overwrite=True)
+    write_json(out_path, out, overwrite=overwrite)
     return out

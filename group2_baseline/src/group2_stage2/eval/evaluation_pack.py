@@ -4,7 +4,7 @@ import json
 import random
 from collections import defaultdict
 from pathlib import Path
-from .common import write_json
+from ..common import write_json
 
 
 def build_heldout_eval_pack(
@@ -70,5 +70,5 @@ def build_heldout_eval_pack(
         )
 
     payload = {"mode": "generated", "all_variants": all_variants, "num_samples": len(samples), "samples_per_task": samples_per_task, "samples": samples}
-    write_json(out_path, payload, overwrite=True)
+    write_json(out_path, payload, overwrite=overwrite)
     return payload

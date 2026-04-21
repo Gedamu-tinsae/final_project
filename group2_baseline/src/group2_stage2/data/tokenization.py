@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .common import load_jsonl
+from ..common import load_jsonl
 
 SEP = "###"
 SYSTEM_PROMPT = (

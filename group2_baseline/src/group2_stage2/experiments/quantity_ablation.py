@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Callable
 
-from .common import load_jsonl, write_jsonl
+from ..common import load_jsonl, write_jsonl
 
 
 def derive_quantity_plan(stage2_root: Path, quality_image_count: int | None = None, val_image_count: int | None = None) -> dict:
@@ -35,7 +35,13 @@ def derive_quantity_plan(stage2_root: Path, quality_image_count: int | None = No
     }
 
 
-def build_quantity_variants(stage2_root: Path, quantity_source_variant: str, quantity_levels: list[int], quantity_split_seed: int) -> list[str]:
+def build_quantity_variants(
+    stage2_root: Path,
+    quantity_source_variant: str,
+    quantity_levels: list[int],
+    quantity_split_seed: int,
+    overwrite: bool = False,
+) -> list[str]:
     pool_info = json.loads((stage2_root / "shared_quality_pool.json").read_text(encoding="utf-8"))
     split_info = json.loads((stage2_root / "shared_split.json").read_text(encoding="utf-8"))
     selected_ids = set(pool_info["selected_image_ids"])
@@ -69,8 +75,8 @@ def build_quantity_variants(stage2_root: Path, quantity_source_variant: str, qua
 
         train_rows = [r for r in rows_all if r["image_id"] in qty_train_ids]
         val_rows = [r for r in rows_all if r["image_id"] in qty_val_ids]
-        write_jsonl(qty_dir / "stage2_train.jsonl", train_rows, overwrite=True)
-        write_jsonl(qty_dir / "stage2_val.jsonl", val_rows, overwrite=True)
+        write_jsonl(qty_dir / "stage2_train.jsonl", train_rows, overwrite=overwrite)
+        write_jsonl(qty_dir / "stage2_val.jsonl", val_rows, overwrite=overwrite)
 
         metadata = {
             "source_variant": quantity_source_variant,

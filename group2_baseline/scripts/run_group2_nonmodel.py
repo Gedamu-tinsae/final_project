@@ -4,8 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from src.group2_stage2.audit import audit_stage2_variants
-from src.group2_stage2.splits import build_shared_quality_pool, materialize_train_val_split
+from src.group2_stage2.data.audit import audit_stage2_variants
+from src.group2_stage2.data.splits import build_shared_quality_pool, materialize_train_val_split
 
 
 def _expand_project_root(cfg: dict, project_root: Path) -> dict:

@@ -4,7 +4,7 @@ import json
 import random
 from pathlib import Path
 
-from .common import load_jsonl, write_json, write_jsonl
+from ..common import load_jsonl, write_json, write_jsonl
 
 
 def build_shared_quality_pool(

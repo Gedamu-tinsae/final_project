@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
-from .common import load_jsonl
+from ..common import load_jsonl
 
 
 def audit_stage2_variants(stage2_root: Path, all_variants: list[str]) -> dict:
@@ -54,4 +54,3 @@ def audit_stage2_variants(stage2_root: Path, all_variants: list[str]) -> dict:
         "issues": issues,
         "image_set_consistency_against_baseline": consistency,
     }
-
