@@ -1,0 +1,59 @@
+# Secrets
+.env
+.env.*
+
+# Python cache/build
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs and artifacts
+*.log
+artifacts/
+outputs/
+checkpoints/
+data/raw/
+data/processed/
+*.zip
+
+# Group2 generated experiment outputs
+report_figures/
+all_results_manual.json
+engine_comparison_summary.json
+baseline_relative_comparison.json
+dataset_quality_diagnostics.json
+prompt_alignment_audit.json
+shared_quality_pool.json
+shared_split.json
+heldout_eval_pack.json
+pairwise_judge_requests.json
+pairwise_judge_results_template.json
+pairwise_judge_results_filled.json
+pairwise_judge_summary.json
+quantity_results.json
+quantity_results_summary.json
+quantity_registration_status.json
+quantity_prep_status.json
+quantity_ablation/
+*_manifest_train.json
+*_manifest_val.json
+*_manifest_full.json
+*_tokenized_train.json
+*_tokenized_val.json
+*_tokenized_full.json
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

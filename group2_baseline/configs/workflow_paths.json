@@ -1,0 +1,14 @@
+{
+  "project_root": "${PROJECT_ROOT}",
+  "stage2_root": "${PROJECT_ROOT}/data/processed/stage2_instruction",
+  "image_root": "${PROJECT_ROOT}/data/raw/train2017",
+  "clip_feature_root": "${PROJECT_ROOT}/data/processed/stage2_features",
+  "baseline_variant": "gemma",
+  "quality_variants": [
+    "qwen",
+    "llama"
+  ],
+  "quality_image_count": 5000,
+  "val_image_count": 1000,
+  "split_seed": 42
+}

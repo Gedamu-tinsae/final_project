@@ -1,6 +1,6 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 10:03:27 PM
+**Generated:** 4/21/2026, 10:35:59 PM
 **Root Path:** `/root/final_project`
 
 ```
@@ -98,6 +98,36 @@
 │   ├── 📄 requirements-core.txt
 │   ├── 📄 requirements-notebook.txt
 │   ├── 📄 requirements-tpu.txt
+│   └── 📄 requirements.txt
+├── 📁 group2_baseline
+│   ├── 📁 configs
+│   │   └── ⚙️ workflow_paths.json
+│   ├── 📁 notebooks
+│   │   └── 📄 LLaVA_Group2_Workflow.ipynb
+│   ├── 📁 notes
+│   │   ├── 📝 CELL_TO_MODULE_MAPPING.md
+│   │   ├── 📝 GROUP2_UNIQUE_COMPONENTS.md
+│   │   └── 📝 MIGRATION_TRACE.md
+│   ├── 📁 scripts
+│   │   └── 🐍 run_group2_nonmodel.py
+│   ├── 📁 src
+│   │   ├── 📁 group2_stage2
+│   │   │   ├── 🐍 __init__.py
+│   │   │   ├── 🐍 audit.py
+│   │   │   ├── 🐍 common.py
+│   │   │   ├── 🐍 evaluation_pack.py
+│   │   │   ├── 🐍 experiment_tracking.py
+│   │   │   ├── 🐍 features.py
+│   │   │   ├── 🐍 manifests.py
+│   │   │   ├── 🐍 pipeline.py
+│   │   │   ├── 🐍 quality_eval.py
+│   │   │   ├── 🐍 quantity_ablation.py
+│   │   │   ├── 🐍 reporting.py
+│   │   │   ├── 🐍 splits.py
+│   │   │   ├── 🐍 tokenization.py
+│   │   │   └── 🐍 training_orchestration.py
+│   │   └── 🐍 __init__.py
+│   ├── 📝 SETUP.md
 │   └── 📄 requirements.txt
 └── 📝 File_Tree.md
 ```
