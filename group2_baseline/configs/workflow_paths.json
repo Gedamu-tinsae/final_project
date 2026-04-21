@@ -3,6 +3,9 @@
   "stage2_root": "${PROJECT_ROOT}/data/processed/stage2_instruction",
   "image_root": "${PROJECT_ROOT}/data/raw/train2017",
   "clip_feature_root": "${PROJECT_ROOT}/data/processed/stage2_features",
+  "reuse_clip_feature_roots": [
+    "${PROJECT_ROOT}/../group1_baseline/data/processed/clip_embeddings"
+  ],
   "baseline_variant": "gemma",
   "quality_variants": [
     "qwen",

@@ -17,14 +17,30 @@ def prepare_stage2_variant_splits(
     all_variants: list[str],
     splits: tuple[str, ...] = ("train", "val"),
     overwrite: bool = False,
+    additional_feature_roots: list[Path] | None = None,
 ) -> list[dict]:
     prep_results: list[dict] = []
     for variant in all_variants:
         for split in splits:
             tok = tokenize_stage2_variant(stage2_root, tokenizer, variant, split, overwrite=overwrite)
             feat = extract_stage2_features(
-                stage2_root, image_root, feature_root, clip_bundle, get_features_compiled, variant, split, overwrite=overwrite
+                stage2_root,
+                image_root,
+                feature_root,
+                clip_bundle,
+                get_features_compiled,
+                variant,
+                split,
+                overwrite=overwrite,
+                additional_feature_roots=additional_feature_roots,
             )
-            manifest = build_stage2_manifest(stage2_root, feature_root, variant, split, overwrite=overwrite)
+            manifest = build_stage2_manifest(
+                stage2_root,
+                feature_root,
+                variant,
+                split,
+                overwrite=overwrite,
+                additional_feature_roots=additional_feature_roots,
+            )
             prep_results.append({"variant": variant, "split": split, "tokenize": tok, "features": feat, "manifest": manifest})
     return prep_results

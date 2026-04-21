@@ -10,6 +10,15 @@ from PIL import Image
 from .tokenization import resolve_stage2_paths
 
 
+def _resolve_feature_path(image_name: str, feature_roots: list[Path]) -> Path | None:
+    rel = Path(image_name).with_suffix(".npy")
+    for root in feature_roots:
+        candidate = root / rel
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def extract_stage2_features(
     stage2_root: Path,
     image_root: Path,
@@ -19,12 +28,15 @@ def extract_stage2_features(
     variant: str,
     data_split: str = "train",
     overwrite: bool = False,
+    additional_feature_roots: list[Path] | None = None,
 ) -> dict:
     _, _, tokenized_json = resolve_stage2_paths(stage2_root, variant, data_split)
     stage2_data = json.loads(tokenized_json.read_text(encoding="utf-8"))
+    feature_roots = [feature_root] + list(additional_feature_roots or [])
 
     created_features = 0
     skipped_features = 0
+    reused_features = 0
     missing_images = 0
     failed_images = 0
 
@@ -34,8 +46,11 @@ def extract_stage2_features(
         feature_path = (feature_root / Path(image_name)).with_suffix(".npy")
         feature_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if feature_path.exists() and not overwrite:
+        existing = _resolve_feature_path(image_name, feature_roots)
+        if existing is not None and not overwrite:
             skipped_features += 1
+            if existing != feature_path:
+                reused_features += 1
             continue
         if not image_path.exists():
             missing_images += 1
@@ -56,6 +71,7 @@ def extract_stage2_features(
         "split": data_split,
         "created_features": created_features,
         "skipped_features": skipped_features,
+        "reused_features": reused_features,
         "missing_images": missing_images,
         "failed_images": failed_images,
     }

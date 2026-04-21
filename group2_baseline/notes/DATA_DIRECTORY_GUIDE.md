@@ -94,6 +94,20 @@ Each variant directory under `stage2_instruction/` commonly contains:
 - These are reused across variants/splits to avoid recomputing vision features.
 - Missing feature files cause manifest rows to be dropped or training to fail for those samples.
 
+## Reusing Group1 CLIP Features (Avoid Expensive Recompute)
+
+Group2 is configured to reuse Group1 CLIP embeddings first, then compute only missing features.
+
+- Config key: `reuse_clip_feature_roots` in `configs/workflow_paths.json`
+- Default points to:
+  - `${PROJECT_ROOT}/../group1_baseline/data/processed/clip_embeddings`
+
+Behavior in Stage 2 prep:
+
+- If feature exists in Group2 `clip_feature_root`: skip compute.
+- Else if feature exists in any `reuse_clip_feature_roots`: reuse that path in manifests (no recompute).
+- Else: compute feature and save under Group2 `clip_feature_root`.
+
 ## Safety Behavior (Overwrite Guard)
 
 Group2 pipeline functions are guarded to avoid expensive accidental overwrite:
