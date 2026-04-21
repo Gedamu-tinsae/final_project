@@ -25,12 +25,18 @@ def make_clip_feature_fn(clip_bundle):
     return get_features
 
 
-def precompute_clip_features_jitted(clip_bundle, tokenized_json, image_root, output_dir):
+def precompute_clip_features_jitted(clip_bundle, tokenized_json, image_root, output_dir, overwrite=False):
     """Precompute CLIP features exactly like notebook cell logic."""
     with open(tokenized_json, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     os.makedirs(output_dir, exist_ok=True)
+    if not overwrite and any(name.endswith(".npy") for name in os.listdir(output_dir)):
+        raise FileExistsError(
+            f"Output dir already has .npy files: {output_dir}. "
+            "Delete existing features first or set overwrite=True."
+        )
+
     get_features_compiled = make_clip_feature_fn(clip_bundle)
 
     print(f"Extracting features for {len(data)} images...")
@@ -44,6 +50,10 @@ def precompute_clip_features_jitted(clip_bundle, tokenized_json, image_root, out
             vision_feats = np.array(hidden_states_penultimate[0])
 
             save_path = os.path.join(output_dir, sample["image"].replace(".jpg", ".npy"))
+            if os.path.exists(save_path) and not overwrite:
+                raise FileExistsError(
+                    f"Feature file exists: {save_path}. Delete it first or set overwrite=True."
+                )
             np.save(save_path, vision_feats)
 
             if i % 100 == 0:

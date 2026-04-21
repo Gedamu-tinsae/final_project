@@ -6,10 +6,15 @@ Each manifest row contains:
 - labels: target labels for loss computation
 """
 
-def build_stage1_manifest(tokenized_json, feature_dir, output_json):
+def build_stage1_manifest(tokenized_json, feature_dir, output_json, overwrite=False):
     """Create stage-1 manifest by pairing tokenized rows with CLIP feature files."""
     import json
     import os
+
+    if os.path.exists(output_json) and not overwrite:
+        raise FileExistsError(
+            f"Output already exists: {output_json}. Delete it first or set overwrite=True."
+        )
 
     with open(tokenized_json, "r") as f:
         data = json.load(f)

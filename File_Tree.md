@@ -1,51 +1,73 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 4:01:53 PM
+**Generated:** 4/21/2026, 4:56:40 PM
 **Root Path:** `/root/final_project`
 
 ```
-└── 📁 group1_baseline
-    ├── 📁 configs
-    │   └── ⚙️ workflow_paths.json
-    ├── 📁 notebooks
-    │   ├── 📄 LLaVA_Baseline_Workflow.ipynb
-    │   └── 📄 LLaVA_Public.ipynb
-    ├── 📁 notes
-    │   ├── 📝 HF_SETUP_STEPS.md
-    │   └── 📝 MIGRATION_TRACE.md
-    ├── 📁 scripts
-    │   └── 🐍 check_env.py
-    ├── 📁 src
-    │   ├── 📁 data_prep
-    │   │   ├── 🐍 convert_alignment_format.py
-    │   │   └── 🐍 prepare_stage1_dataset.py
-    │   ├── 📁 model_internals
-    │   │   ├── 🐍 model.py
-    │   │   └── 🐍 params.py
-    │   ├── 📁 training
-    │   │   ├── 🐍 __init__.py
-    │   │   ├── 🐍 batching.py
-    │   │   ├── 🐍 clip_features.py
-    │   │   ├── 🐍 losses.py
-    │   │   ├── 🐍 memory.py
-    │   │   ├── 🐍 multimodal.py
-    │   │   ├── 🐍 projector.py
-    │   │   ├── 🐍 stage1.py
-    │   │   ├── 🐍 stage2.py
-    │   │   └── 🐍 tokenization.py
-    │   ├── 📁 training_manifests
-    │   │   ├── 🐍 build_stage1_manifest.py
-    │   │   └── 🐍 build_stage2_manifest.py
-    │   ├── 📁 vision_features
-    │   │   ├── 🐍 clip_helpers.py
-    │   │   └── 🐍 precompute_clip_features.py
-    │   └── 🐍 config_loader.py
-    ├── ⚙️ .gitignore
-    ├── 📝 SETUP.md
-    ├── 📄 requirements-core.txt
-    ├── 📄 requirements-notebook.txt
-    ├── 📄 requirements-tpu.txt
-    └── 📄 requirements.txt
+├── 📁 group1_baseline
+│   ├── 📁 artifacts
+│   ├── 📁 configs
+│   │   └── ⚙️ workflow_paths.json
+│   ├── 📁 data
+│   │   ├── 📁 processed
+│   │   │   └── 📁 stage1_alignment
+│   │   │       ├── ⚙️ alignment.json
+│   │   │       └── ⚙️ alignment_chat.json
+│   │   └── 📁 raw
+│   │       ├── 📁 annotations
+│   │       │   ├── ⚙️ captions_train2017.json
+│   │       │   ├── ⚙️ captions_val2017.json
+│   │       │   ├── ⚙️ instances_train2017.json
+│   │       │   ├── ⚙️ instances_val2017.json
+│   │       │   ├── ⚙️ person_keypoints_train2017.json
+│   │       │   └── ⚙️ person_keypoints_val2017.json
+│   │       ├── 📁 train2017
+│   │       │   ├── 🖼️ 000000000009.jpg
+│   │       │   ├── 🖼️ 000000000025.jpg...
+│   │       │   └── 🖼️ 000000581929.jpg
+│   │       ├── 📦 annotations_trainval2017.zip
+│   │       └── 📦 train2017.zip
+│   ├── 📁 notebooks
+│   │   ├── 📄 LLaVA_Baseline_Workflow.ipynb
+│   │   └── 📄 LLaVA_Public.ipynb
+│   ├── 📁 notes
+│   │   ├── 📝 HF_SETUP_STEPS.md
+│   │   └── 📝 MIGRATION_TRACE.md
+│   ├── 📁 scripts
+│   │   └── 🐍 check_env.py
+│   ├── 📁 src
+│   │   ├── 📁 data_prep
+│   │   │   ├── 🐍 acquire_coco.py
+│   │   │   ├── 🐍 convert_alignment_format.py
+│   │   │   └── 🐍 prepare_stage1_dataset.py
+│   │   ├── 📁 model_internals
+│   │   │   ├── 🐍 model.py
+│   │   │   └── 🐍 params.py
+│   │   ├── 📁 training
+│   │   │   ├── 🐍 __init__.py
+│   │   │   ├── 🐍 batching.py
+│   │   │   ├── 🐍 clip_features.py
+│   │   │   ├── 🐍 losses.py
+│   │   │   ├── 🐍 memory.py
+│   │   │   ├── 🐍 multimodal.py
+│   │   │   ├── 🐍 projector.py
+│   │   │   ├── 🐍 stage1.py
+│   │   │   ├── 🐍 stage2.py
+│   │   │   └── 🐍 tokenization.py
+│   │   ├── 📁 training_manifests
+│   │   │   ├── 🐍 build_stage1_manifest.py
+│   │   │   └── 🐍 build_stage2_manifest.py
+│   │   ├── 📁 vision_features
+│   │   │   ├── 🐍 clip_helpers.py
+│   │   │   └── 🐍 precompute_clip_features.py
+│   │   └── 🐍 config_loader.py
+│   ├── ⚙️ .gitignore
+│   ├── 📝 SETUP.md
+│   ├── 📄 requirements-core.txt
+│   ├── 📄 requirements-notebook.txt
+│   ├── 📄 requirements-tpu.txt
+│   └── 📄 requirements.txt
+└── 📝 File_Tree.md
 ```
 
 ---

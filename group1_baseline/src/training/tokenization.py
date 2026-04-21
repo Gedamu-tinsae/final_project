@@ -34,8 +34,13 @@ def serialize_instruction_sample(tokenizer, sample, max_len=128):
     }
 
 
-def build_tokenized_dataset(tokenizer, input_json, output_json, max_len=128):
+def build_tokenized_dataset(tokenizer, input_json, output_json, max_len=128, overwrite=False):
     """Tokenize all rows from input_json and write a tokenized JSON file."""
+    if os.path.exists(output_json) and not overwrite:
+        raise FileExistsError(
+            f"Output already exists: {output_json}. Delete it first or set overwrite=True."
+        )
+
     with open(input_json, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -59,11 +64,23 @@ def serialize_stage2_sample(tokenizer, sample, max_len=256):
     return serialize_instruction_sample(tokenizer, sample, max_len=max_len)
 
 
-def build_tokenized_stage1_dataset(tokenizer, input_json, output_json, max_len=128):
+def build_tokenized_stage1_dataset(tokenizer, input_json, output_json, max_len=128, overwrite=False):
     """Group-1 notebook-compatible stage-1 dataset builder."""
-    return build_tokenized_dataset(tokenizer, input_json, output_json, max_len=max_len)
+    return build_tokenized_dataset(
+        tokenizer,
+        input_json,
+        output_json,
+        max_len=max_len,
+        overwrite=overwrite,
+    )
 
 
-def build_tokenized_stage2_dataset(tokenizer, input_json, output_json, max_len=256):
+def build_tokenized_stage2_dataset(tokenizer, input_json, output_json, max_len=256, overwrite=False):
     """Group-1 notebook-compatible stage-2 dataset builder."""
-    return build_tokenized_dataset(tokenizer, input_json, output_json, max_len=max_len)
+    return build_tokenized_dataset(
+        tokenizer,
+        input_json,
+        output_json,
+        max_len=max_len,
+        overwrite=overwrite,
+    )

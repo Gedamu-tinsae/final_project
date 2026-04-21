@@ -21,6 +21,9 @@ env/
 artifacts/
 outputs/
 checkpoints/
+data/raw/
+data/processed/
+*.zip
 
 # OS/editor
 .DS_Store

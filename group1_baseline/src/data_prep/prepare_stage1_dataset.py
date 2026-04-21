@@ -44,11 +44,20 @@ def parse_args():
         type=Path,
         default=Path("data/processed/stage1_alignment/alignment.json"),
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Allow overwriting existing output file.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.output.exists() and not args.overwrite:
+        raise FileExistsError(
+            f"Output already exists: {args.output}. Delete it first or run with --overwrite."
+        )
     dataset = build_alignment(args.coco_json)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as f:

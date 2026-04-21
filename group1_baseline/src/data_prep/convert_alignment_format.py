@@ -50,11 +50,20 @@ def parse_args():
         default=Path("data/processed/stage1_alignment/alignment_chat.json"),
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Allow overwriting existing output file.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.output.exists() and not args.overwrite:
+        raise FileExistsError(
+            f"Output already exists: {args.output}. Delete it first or run with --overwrite."
+        )
     # Read stage-1 alignment rows from previous step.
     with args.input.open("r", encoding="utf-8") as f:
         data = json.load(f)
