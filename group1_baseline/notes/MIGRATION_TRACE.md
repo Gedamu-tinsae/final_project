@@ -105,6 +105,17 @@ Migrated definitions:
 - `build_tokenized_stage2_dataset` -> `src/training/tokenization.py`
 - `run_stage2_training` -> `src/training/stage2.py`
 
+## Data Download Coverage (Original Cell 14)
+
+Original notebook cell 14 used inline shell commands (`wget`/`unzip`) to fetch COCO.
+That logic is now accounted for in:
+
+- `src/data_prep/acquire_coco.py`
+  - `acquire_coco_2017(...)`
+  - `coco_files_status(...)`
+
+The workflow notebook now calls this `src` module directly during Stage 1 orchestration.
+
 ## Notebook-First Cells (Recommended to Run in Notebook for Storytelling)
 
 These are better demonstrated interactively, even when backed by scripts:
