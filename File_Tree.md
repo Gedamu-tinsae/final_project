@@ -1,6 +1,6 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 7:00:52 PM
+**Generated:** 4/21/2026, 10:03:27 PM
 **Root Path:** `/root/final_project`
 
 ```
@@ -29,7 +29,8 @@
 │   │   │   │   ├── ⚙️ alignment.json
 │   │   │   │   ├── ⚙️ alignment_chat.json
 │   │   │   │   ├── ⚙️ alignment_tokenized.json
-│   │   │   │   └── ⚙️ stage1_manifest.json
+│   │   │   │   ├── ⚙️ stage1_manifest.json
+│   │   │   │   └── ⚙️ stage1_manifest_smoke.json
 │   │   │   └── 📁 stage2_finetuning
 │   │   │       ├── ⚙️ alignment_tokenized_stage2.json
 │   │   │       └── ⚙️ stage2_manifest.json
@@ -49,14 +50,17 @@
 │   │       └── 📦 train2017.zip
 │   ├── 📁 notebooks
 │   │   ├── 📄 LLaVA_Baseline_Workflow.ipynb
-│   │   └── 📄 LLaVA_Public.ipynb
+│   │   └── 📄 LLaVA_Public_legacy.ipynb
 │   ├── 📁 notes
 │   │   ├── 📝 DATA_DIRECTORY_GUIDE.md
 │   │   ├── 📝 HF_GATED_MODEL_ACCESS.md
 │   │   ├── 📝 HF_SETUP_STEPS.md
-│   │   └── 📝 MIGRATION_TRACE.md
+│   │   ├── 📝 MIGRATION_TRACE.md
+│   │   ├── 📝 TPU_PROVISIONING_GUIDE.md
+│   │   └── 📝 TPU_RUN_SETUP.md
 │   ├── 📁 scripts
-│   │   └── 🐍 check_env.py
+│   │   ├── 🐍 check_env.py
+│   │   └── 🐍 run_tpu_smoke.py
 │   ├── 📁 src
 │   │   ├── 📁 data_prep
 │   │   │   ├── 🐍 acquire_coco.py
