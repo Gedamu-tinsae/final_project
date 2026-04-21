@@ -15,9 +15,19 @@ def load_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
+def write_json(path: Path, payload: dict, overwrite: bool = False) -> dict:
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(path)}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"mode": "generated", "path": str(path)}
+
+
+def write_jsonl(path: Path, rows: Iterable[dict], overwrite: bool = False) -> dict:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(path)}
     with path.open("w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
-
+    return {"mode": "generated", "path": str(path)}

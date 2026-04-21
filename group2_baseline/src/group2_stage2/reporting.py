@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 
 
-def build_engine_plots_and_table(stage2_root: Path) -> dict:
+def build_engine_plots_and_table(stage2_root: Path, overwrite: bool = False) -> dict:
     import matplotlib.pyplot as plt
 
     engine_summary = json.loads((stage2_root / "engine_comparison_summary.json").read_text(encoding="utf-8"))
@@ -20,6 +20,9 @@ def build_engine_plots_and_table(stage2_root: Path) -> dict:
 
     plots_dir = stage2_root / "report_figures"
     plots_dir.mkdir(parents=True, exist_ok=True)
+
+    if not overwrite and (plots_dir / "engine_results_table.md").exists():
+        return {"mode": "skipped_existing", "path": str(plots_dir / "engine_results_table.md")}
 
     def clean_values(values):
         return [float(v) if v is not None else math.nan for v in values]
@@ -69,9 +72,9 @@ def build_engine_plots_and_table(stage2_root: Path) -> dict:
             f.write(f"| {v} | {tr_str} | {va_str} | {rw_str} |\n")
 
     return {
+        "mode": "generated",
         "final_validation_plot": str(val_plot_path),
         "final_training_plot": str(train_plot_path),
         "mean_response_words_plot": str(resp_plot_path),
         "summary_table_md": str(summary_md_path),
     }
-

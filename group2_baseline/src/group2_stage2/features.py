@@ -18,6 +18,7 @@ def extract_stage2_features(
     get_features_compiled,
     variant: str,
     data_split: str = "train",
+    overwrite: bool = False,
 ) -> dict:
     _, _, tokenized_json = resolve_stage2_paths(stage2_root, variant, data_split)
     stage2_data = json.loads(tokenized_json.read_text(encoding="utf-8"))
@@ -33,7 +34,7 @@ def extract_stage2_features(
         feature_path = (feature_root / Path(image_name)).with_suffix(".npy")
         feature_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if feature_path.exists():
+        if feature_path.exists() and not overwrite:
             skipped_features += 1
             continue
         if not image_path.exists():
@@ -58,4 +59,3 @@ def extract_stage2_features(
         "missing_images": missing_images,
         "failed_images": failed_images,
     }
-

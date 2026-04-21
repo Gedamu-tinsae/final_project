@@ -37,7 +37,15 @@ def run_and_store_variant(
     return {"all_results": all_results, "ran_variant": selected_variant}
 
 
-def prompt_alignment_audit(stage2_root: Path, all_variants: list[str], prompt_reference_variant: str) -> dict:
+def prompt_alignment_audit(
+    stage2_root: Path,
+    all_variants: list[str],
+    prompt_reference_variant: str,
+    overwrite: bool = False,
+) -> dict:
+    out_path = stage2_root / "prompt_alignment_audit.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     pool_path = stage2_root / "shared_quality_pool.json"
     selected_ids = None
     if pool_path.exists():
@@ -91,8 +99,13 @@ def prompt_alignment_audit(stage2_root: Path, all_variants: list[str], prompt_re
             }
         )
 
-    out = {"reference_variant": prompt_reference_variant, "audit_rows": rows, "mismatch_examples": mismatch_examples}
-    (stage2_root / "prompt_alignment_audit.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    out = {
+        "mode": "generated",
+        "reference_variant": prompt_reference_variant,
+        "audit_rows": rows,
+        "mismatch_examples": mismatch_examples,
+    }
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     return out
 
 
@@ -103,7 +116,15 @@ def _first_existing(d: dict, keys: list[str]):
     return None, None
 
 
-def build_engine_comparison_summary(stage2_root: Path, results_path: Path, expected_variants: list[str]) -> dict:
+def build_engine_comparison_summary(
+    stage2_root: Path,
+    results_path: Path,
+    expected_variants: list[str],
+    overwrite: bool = False,
+) -> dict:
+    out_path = stage2_root / "engine_comparison_summary.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     all_results = json.loads(results_path.read_text(encoding="utf-8"))
     missing_variants = [v for v in expected_variants if v not in all_results]
     if missing_variants:
@@ -130,12 +151,26 @@ def build_engine_comparison_summary(stage2_root: Path, results_path: Path, expec
         )
 
     rows = sorted(rows, key=lambda x: x["final_val_mean_loss"])
-    summary = {"ranking_metric": "final_val_mean_loss_lower_is_better", "best_variant": rows[0]["variant"], "variant_summaries": rows}
-    (stage2_root / "engine_comparison_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    summary = {
+        "mode": "generated",
+        "ranking_metric": "final_val_mean_loss_lower_is_better",
+        "best_variant": rows[0]["variant"],
+        "variant_summaries": rows,
+    }
+    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
 
 
-def build_baseline_relative_comparison(stage2_root: Path, results_path: Path, baseline_variant: str, expected_variants: list[str]) -> dict:
+def build_baseline_relative_comparison(
+    stage2_root: Path,
+    results_path: Path,
+    baseline_variant: str,
+    expected_variants: list[str],
+    overwrite: bool = False,
+) -> dict:
+    out_path = stage2_root / "baseline_relative_comparison.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     all_results = json.loads(results_path.read_text(encoding="utf-8"))
     baseline_train = all_results[baseline_variant].get("final_train_mean_loss")
     baseline_val = (all_results[baseline_variant].get("val_result") or {}).get("mean_loss")
@@ -157,7 +192,11 @@ def build_baseline_relative_comparison(stage2_root: Path, results_path: Path, ba
             }
         )
 
-    out = {"baseline_variant": baseline_variant, "expected_variants": expected_variants, "rows": rows}
-    (stage2_root / "baseline_relative_comparison.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    out = {
+        "mode": "generated",
+        "baseline_variant": baseline_variant,
+        "expected_variants": expected_variants,
+        "rows": rows,
+    }
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     return out
-

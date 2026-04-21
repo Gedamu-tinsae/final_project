@@ -4,7 +4,7 @@ import json
 import random
 from pathlib import Path
 
-from .common import load_jsonl, write_jsonl
+from .common import load_jsonl, write_json, write_jsonl
 
 
 def build_shared_quality_pool(
@@ -14,6 +14,7 @@ def build_shared_quality_pool(
     val_image_count: int,
     split_seed: int,
     pool_reference_variant: str,
+    overwrite: bool = False,
 ) -> dict:
     variant_image_sets: dict[str, set] = {}
     for variant in all_variants:
@@ -56,12 +57,12 @@ def build_shared_quality_pool(
         "val_image_ids": sorted(val_image_ids),
     }
 
-    (stage2_root / "shared_quality_pool.json").write_text(json.dumps(pool_info, indent=2), encoding="utf-8")
-    (stage2_root / "shared_split.json").write_text(json.dumps(split_info, indent=2), encoding="utf-8")
-    return {"pool_info": pool_info, "split_info": split_info}
+    pool_write = write_json(stage2_root / "shared_quality_pool.json", pool_info, overwrite=overwrite)
+    split_write = write_json(stage2_root / "shared_split.json", split_info, overwrite=overwrite)
+    return {"pool_info": pool_info, "split_info": split_info, "pool_write": pool_write, "split_write": split_write}
 
 
-def materialize_train_val_split(stage2_root: Path, all_variants: list[str]) -> dict:
+def materialize_train_val_split(stage2_root: Path, all_variants: list[str], overwrite: bool = False) -> dict:
     pool_info = json.loads((stage2_root / "shared_quality_pool.json").read_text(encoding="utf-8"))
     split_info = json.loads((stage2_root / "shared_split.json").read_text(encoding="utf-8"))
     selected_ids = set(pool_info["selected_image_ids"])
@@ -74,12 +75,13 @@ def materialize_train_val_split(stage2_root: Path, all_variants: list[str]) -> d
         rows = [r for r in load_jsonl(src) if r["image_id"] in selected_ids]
         train_rows = [r for r in rows if r["image_id"] in train_ids]
         val_rows = [r for r in rows if r["image_id"] in val_ids]
-        write_jsonl(stage2_root / variant / "stage2_train.jsonl", train_rows)
-        write_jsonl(stage2_root / variant / "stage2_val.jsonl", val_rows)
+        train_write = write_jsonl(stage2_root / variant / "stage2_train.jsonl", train_rows, overwrite=overwrite)
+        val_write = write_jsonl(stage2_root / variant / "stage2_val.jsonl", val_rows, overwrite=overwrite)
         result[variant] = {
             "pooled_rows": len(rows),
             "train_rows": len(train_rows),
             "val_rows": len(val_rows),
+            "train_write": train_write,
+            "val_write": val_write,
         }
     return result
-

@@ -4,6 +4,7 @@ import json
 import random
 from collections import defaultdict
 from pathlib import Path
+from .common import write_json
 
 
 def build_heldout_eval_pack(
@@ -11,7 +12,11 @@ def build_heldout_eval_pack(
     all_variants: list[str],
     samples_per_task: int = 10,
     seed: int = 123,
+    overwrite: bool = False,
 ) -> dict:
+    out_path = stage2_root / "heldout_eval_pack.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     split_path = stage2_root / "shared_split.json"
     split_info = json.loads(split_path.read_text(encoding="utf-8"))
     val_ids = set(split_info["val_image_ids"])
@@ -64,7 +69,6 @@ def build_heldout_eval_pack(
             }
         )
 
-    payload = {"all_variants": all_variants, "num_samples": len(samples), "samples_per_task": samples_per_task, "samples": samples}
-    (stage2_root / "heldout_eval_pack.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = {"mode": "generated", "all_variants": all_variants, "num_samples": len(samples), "samples_per_task": samples_per_task, "samples": samples}
+    write_json(out_path, payload, overwrite=True)
     return payload
-

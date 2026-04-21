@@ -58,11 +58,24 @@ def serialize_stage2_sample(tokenizer, sample: dict, variant: str, data_split: s
     }
 
 
-def tokenize_stage2_variant(stage2_root: Path, tokenizer, variant: str, data_split: str = "train", max_len: int = 256) -> dict:
+def tokenize_stage2_variant(
+    stage2_root: Path,
+    tokenizer,
+    variant: str,
+    data_split: str = "train",
+    max_len: int = 256,
+    overwrite: bool = False,
+) -> dict:
     variant_dir, src_jsonl, tokenized_json = resolve_stage2_paths(stage2_root, variant, data_split)
+    if tokenized_json.exists() and not overwrite:
+        return {
+            "mode": "skipped_existing",
+            "variant": variant,
+            "split": data_split,
+            "tokenized_json": str(tokenized_json),
+        }
     rows = load_jsonl(src_jsonl)
     tokenized = [serialize_stage2_sample(tokenizer, row, variant=variant, data_split=data_split, max_len=max_len) for row in rows]
     tokenized_json.parent.mkdir(parents=True, exist_ok=True)
     tokenized_json.write_text(json.dumps(tokenized, ensure_ascii=False), encoding="utf-8")
-    return {"variant": variant, "split": data_split, "rows": len(tokenized), "tokenized_json": str(tokenized_json)}
-
+    return {"mode": "generated", "variant": variant, "split": data_split, "rows": len(tokenized), "tokenized_json": str(tokenized_json)}

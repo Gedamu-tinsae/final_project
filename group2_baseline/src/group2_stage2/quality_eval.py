@@ -6,7 +6,7 @@ import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .common import load_jsonl
+from .common import load_jsonl, write_json
 
 
 def _safe_mean(xs: list[float]) -> float | None:
@@ -17,7 +17,10 @@ def _safe_median(xs: list[float]) -> float | None:
     return statistics.median(xs) if xs else None
 
 
-def build_dataset_quality_diagnostics(stage2_root: Path, all_variants: list[str]) -> dict:
+def build_dataset_quality_diagnostics(stage2_root: Path, all_variants: list[str], overwrite: bool = False) -> dict:
+    out_path = stage2_root / "dataset_quality_diagnostics.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     pool_path = stage2_root / "shared_quality_pool.json"
     selected_ids = None
     if pool_path.exists():
@@ -62,8 +65,8 @@ def build_dataset_quality_diagnostics(stage2_root: Path, all_variants: list[str]
             }
         diagnostics.append(variant_summary)
 
-    out = {"all_variants": all_variants, "diagnostics": diagnostics}
-    (stage2_root / "dataset_quality_diagnostics.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+    out = {"mode": "generated", "all_variants": all_variants, "diagnostics": diagnostics}
+    write_json(out_path, out, overwrite=True)
     return out
 
 
@@ -72,7 +75,11 @@ def build_qualitative_samples_pack(
     all_variants: list[str],
     per_task: int = 4,
     seed: int = 42,
+    overwrite: bool = False,
 ) -> dict:
+    out_path = stage2_root / "qualitative_comparison_samples.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     rows_by_variant_key: dict[str, dict] = {}
     for variant in all_variants:
         rows = load_jsonl(stage2_root / variant / "stage2_dataset.jsonl")
@@ -112,8 +119,8 @@ def build_qualitative_samples_pack(
         }
         samples.append(sample)
 
-    out = {"all_variants": all_variants, "num_samples": len(samples), "samples": samples}
-    (stage2_root / "qualitative_comparison_samples.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    out = {"mode": "generated", "all_variants": all_variants, "num_samples": len(samples), "samples": samples}
+    write_json(out_path, out, overwrite=True)
     return out
 
 
@@ -121,7 +128,11 @@ def build_pairwise_judge_requests(
     stage2_root: Path,
     baseline_variant: str,
     seed: int = 2026,
+    overwrite: bool = False,
 ) -> dict:
+    out_path = stage2_root / "pairwise_judge_requests.json"
+    if out_path.exists() and not overwrite:
+        return {"mode": "skipped_existing", "path": str(out_path)}
     eval_pack_path = stage2_root / "heldout_eval_pack.json"
     eval_pack = json.loads(eval_pack_path.read_text(encoding="utf-8"))
     all_variants = eval_pack["all_variants"]
@@ -153,7 +164,6 @@ def build_pairwise_judge_requests(
                 }
             )
 
-    out = {"baseline_variant": baseline_variant, "requests": requests}
-    (stage2_root / "pairwise_judge_requests.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    out = {"mode": "generated", "baseline_variant": baseline_variant, "requests": requests}
+    write_json(out_path, out, overwrite=True)
     return out
-

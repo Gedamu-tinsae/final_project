@@ -69,8 +69,8 @@ def build_quantity_variants(stage2_root: Path, quantity_source_variant: str, qua
 
         train_rows = [r for r in rows_all if r["image_id"] in qty_train_ids]
         val_rows = [r for r in rows_all if r["image_id"] in qty_val_ids]
-        write_jsonl(qty_dir / "stage2_train.jsonl", train_rows)
-        write_jsonl(qty_dir / "stage2_val.jsonl", val_rows)
+        write_jsonl(qty_dir / "stage2_train.jsonl", train_rows, overwrite=True)
+        write_jsonl(qty_dir / "stage2_val.jsonl", val_rows, overwrite=True)
 
         metadata = {
             "source_variant": quantity_source_variant,
@@ -87,7 +87,7 @@ def build_quantity_variants(stage2_root: Path, quantity_source_variant: str, qua
     return quantity_variants
 
 
-def register_quantity_variants(stage2_root: Path, quantity_variants: list[str]) -> dict:
+def register_quantity_variants(stage2_root: Path, quantity_variants: list[str], overwrite: bool = False) -> dict:
     registration_path = stage2_root / "quantity_registration_status.json"
     try:
         registration_status = json.loads(registration_path.read_text(encoding="utf-8"))
@@ -100,7 +100,10 @@ def register_quantity_variants(stage2_root: Path, quantity_variants: list[str]) 
         dst_dir = stage2_root / qty_variant
         dst_dir.mkdir(parents=True, exist_ok=True)
         for filename in required_files:
-            shutil.copy2(src_dir / filename, dst_dir / filename)
+            dst_file = dst_dir / filename
+            if dst_file.exists() and not overwrite:
+                continue
+            shutil.copy2(src_dir / filename, dst_file)
         registration_status[qty_variant] = {
             "status": "registered",
             "source_dir": str(src_dir),
@@ -117,6 +120,7 @@ def prepare_quantity_variants(
     tokenize_fn: Callable[[str, str], dict],
     extract_features_fn: Callable[[str, str], dict],
     build_manifest_fn: Callable[[str, str], dict],
+    overwrite: bool = False,
 ) -> dict:
     prep_status_path = stage2_root / "quantity_prep_status.json"
     try:
@@ -128,16 +132,16 @@ def prepare_quantity_variants(
         variant_root = stage2_root / variant
         train_manifest = variant_root / "stage2_manifest_train.json"
         val_manifest = variant_root / "stage2_manifest_val.json"
-        if train_manifest.exists() and val_manifest.exists():
+        if train_manifest.exists() and val_manifest.exists() and not overwrite:
             prep_status[variant] = {"status": "ready", "train_manifest": str(train_manifest), "val_manifest": str(val_manifest)}
             prep_status_path.write_text(json.dumps(prep_status, ensure_ascii=False, indent=2), encoding="utf-8")
             continue
 
         variant_log = {"status": "started", "splits": {}}
         for split in ["train", "val"]:
-            tok_result = tokenize_fn(variant, split)
-            feat_result = extract_features_fn(variant, split)
-            manifest_result = build_manifest_fn(variant, split)
+            tok_result = tokenize_fn(variant, split, overwrite=overwrite)
+            feat_result = extract_features_fn(variant, split, overwrite=overwrite)
+            manifest_result = build_manifest_fn(variant, split, overwrite=overwrite)
             variant_log["splits"][split] = {"tokenize": tok_result, "features": feat_result, "manifest": manifest_result}
             prep_status[variant] = variant_log
             prep_status_path.write_text(json.dumps(prep_status, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -186,6 +190,6 @@ def summarize_quantity_results(stage2_root: Path) -> dict:
         key=lambda x: x["val_loss"] if x["val_loss"] is not None else float("inf"),
     ) if quantity_ranking else None
     out = {"quantity_ranking": quantity_ranking, "best_quantity_row": best_qty_row}
-    (stage2_root / "quantity_results_summary.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path = stage2_root / "quantity_results_summary.json"
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     return out
-
