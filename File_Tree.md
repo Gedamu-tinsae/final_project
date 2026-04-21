@@ -1,6 +1,6 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 6:27:07 PM
+**Generated:** 4/21/2026, 6:32:02 PM
 **Root Path:** `/root/final_project`
 
 ```
@@ -20,9 +20,11 @@
 │   │   │   ├── 📁 stage1_alignment
 │   │   │   │   ├── ⚙️ alignment.json
 │   │   │   │   ├── ⚙️ alignment_chat.json
-│   │   │   │   └── ⚙️ alignment_tokenized.json
+│   │   │   │   ├── ⚙️ alignment_tokenized.json
+│   │   │   │   └── ⚙️ stage1_manifest.json
 │   │   │   └── 📁 stage2_finetuning
-│   │   │       └── ⚙️ alignment_tokenized_stage2.json
+│   │   │       ├── ⚙️ alignment_tokenized_stage2.json
+│   │   │       └── ⚙️ stage2_manifest.json
 │   │   └── 📁 raw
 │   │       ├── 📁 annotations
 │   │       │   ├── ⚙️ captions_train2017.json
@@ -70,7 +72,8 @@
 │   │   │   └── 🐍 tokenization_pipeline.py
 │   │   ├── 📁 training_manifests
 │   │   │   ├── 🐍 build_stage1_manifest.py
-│   │   │   └── 🐍 build_stage2_manifest.py
+│   │   │   ├── 🐍 build_stage2_manifest.py
+│   │   │   └── 🐍 manifest_pipeline.py
 │   │   ├── 📁 vision_features
 │   │   │   ├── 🐍 clip_helpers.py
 │   │   │   ├── 🐍 feature_pipeline.py
