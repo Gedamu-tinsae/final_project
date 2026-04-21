@@ -1,5 +1,6 @@
 {
   "tokenizer_id": "meta-llama/Llama-3.2-1B-Instruct",
+  "llama_local_dir": "${PROJECT_ROOT}/data/models/Llama-3.2-1B-Instruct",
 
   "coco_json": "${PROJECT_ROOT}/data/raw/annotations/captions_train2017.json",
   "image_root": "${PROJECT_ROOT}/data/raw/train2017",

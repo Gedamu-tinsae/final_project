@@ -1,6 +1,6 @@
 # File Tree: final_project
 
-**Generated:** 4/21/2026, 6:32:02 PM
+**Generated:** 4/21/2026, 7:00:52 PM
 **Root Path:** `/root/final_project`
 
 ```
@@ -9,6 +9,14 @@
 │   ├── 📁 configs
 │   │   └── ⚙️ workflow_paths.json
 │   ├── 📁 data
+│   │   ├── 📁 models
+│   │   │   └── 📁 Llama-3.2-1B-Instruct
+│   │   │       ├── ⚙️ config.json
+│   │   │       ├── ⚙️ generation_config.json
+│   │   │       ├── 📄 model.safetensors
+│   │   │       ├── ⚙️ special_tokens_map.json
+│   │   │       ├── ⚙️ tokenizer.json
+│   │   │       └── ⚙️ tokenizer_config.json
 │   │   ├── 📁 processed
 │   │   │   ├── 📁 clip_embeddings
 │   │   │   │   ├── 📄 000000000775.npy
@@ -56,6 +64,7 @@
 │   │   │   ├── 🐍 prepare_stage1_dataset.py
 │   │   │   └── 🐍 stage1_pipeline.py
 │   │   ├── 📁 model_internals
+│   │   │   ├── 🐍 loader_pipeline.py
 │   │   │   ├── 🐍 model.py
 │   │   │   └── 🐍 params.py
 │   │   ├── 📁 training
@@ -69,7 +78,8 @@
 │   │   │   ├── 🐍 stage1.py
 │   │   │   ├── 🐍 stage2.py
 │   │   │   ├── 🐍 tokenization.py
-│   │   │   └── 🐍 tokenization_pipeline.py
+│   │   │   ├── 🐍 tokenization_pipeline.py
+│   │   │   └── 🐍 train_pipeline.py
 │   │   ├── 📁 training_manifests
 │   │   │   ├── 🐍 build_stage1_manifest.py
 │   │   │   ├── 🐍 build_stage2_manifest.py
