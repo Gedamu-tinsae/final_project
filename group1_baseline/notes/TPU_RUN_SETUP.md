@@ -132,6 +132,22 @@ If this fails:
 - `Not logged in`:
   - ensure `.env` was sourced (`echo $HF_TOKEN` should not be empty).
 
+Quick checks before running:
+
+```bash
+echo "${HF_TOKEN:+HF_TOKEN is set}"
+python -c "from huggingface_hub import whoami; print(whoami())"
+```
+
+If token is missing:
+
+```bash
+echo 'HF_TOKEN=your_token_here' > .env
+set -a
+source .env
+set +a
+```
+
 ## 8) Preflight checks
 
 ```bash
@@ -172,7 +188,7 @@ Important for this host (`tunix-vm` / GKE COS):
 
 Script-first smoke flow (works on this host):
 ```bash
-python scripts/run_tpu_smoke.py --overwrite
+PYTHONPATH=. python scripts/run_tpu_smoke.py --overwrite
 ```
 
 This script handles:
@@ -180,6 +196,10 @@ This script handles:
 - model artifact ensure/load (stage 4.5 equivalent)
 - stage 5 smoke run
 - stage 6 smoke run
+
+If this fails:
+- `ModuleNotFoundError: No module named 'src'`:
+  - run with `PYTHONPATH=.` exactly as shown above.
 
 ## 10) Save changes safely
 
