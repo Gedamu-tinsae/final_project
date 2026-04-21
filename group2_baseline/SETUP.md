@@ -35,3 +35,18 @@ Open:
 
 Run stage-by-stage. The notebook is orchestration only; heavy logic is in `src/group2_stage2`.
 
+## 4) GPU-safe execution mode (until TPU is ready)
+
+Use conservative settings first:
+
+1. In Group1, verify backend:
+   - `python scripts/check_accelerator.py`
+2. In Group2 notebook Stage 2 prep cell:
+   - keep `OVERWRITE_STAGE2_PREP = False`
+   - prepare only one variant first (for example baseline only)
+   - prepare only `val` split first when testing
+3. In Stage 4/5:
+   - keep run toggles `False` until inputs/manifests look correct
+   - run one variant experiment at a time
+
+This avoids accidental full recompute/training spend on GPU.

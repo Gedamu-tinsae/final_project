@@ -3,6 +3,12 @@
 ## 1) Create venv
 
 ```bash
+python -m venv .venv
+```
+
+Remote server (recommended for TPU path):
+
+```bash
 python3.11 -m venv .venv
 ```
 
@@ -47,6 +53,23 @@ pip install --upgrade pip
 pip install -r requirements.txt
 pip install -r requirements-tpu.txt
 ```
+
+### Option D: GPU-safe path (recommended until TPU is ready)
+
+Install regular requirements first:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Then verify accelerator backend:
+
+```bash
+python scripts/check_accelerator.py
+```
+
+If backend is `cpu`, GPU JAX is not installed yet (safe to continue smoke on CPU, but slower).
 
 ## 4) Run environment preflight check
 
@@ -107,3 +130,15 @@ echo $HF_TOKEN
 ```
 
 The workflow notebook loads both automatically in Stage 0.
+
+## 8) Safe GPU Smoke Run (no full expensive run)
+
+From `code/group1_baseline`:
+
+```bash
+python scripts/run_tpu_smoke.py --max-rows 64 --stage1-batch-size 1 --stage2-batch-size 1 --dtype float32
+```
+
+Notes:
+- Keep `--overwrite` off unless you intentionally want to regenerate artifacts.
+- Use small `--max-rows` first to validate pipeline wiring before full runs.

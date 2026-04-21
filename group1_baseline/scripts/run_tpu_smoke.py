@@ -1,6 +1,6 @@
-"""Run Stage 4.5 -> Stage 5 -> Stage 6 smoke flow on TPU/COS hosts.
+"""Run Stage 4.5 -> Stage 5 -> Stage 6 smoke flow on accelerator hosts.
 
-Designed for environments where notebook UI is unreliable (e.g., GKE COS noexec mounts).
+Designed for environments where notebook UI is unreliable.
 
 Usage:
   python scripts/run_tpu_smoke.py
@@ -10,7 +10,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config_loader import load_dotenv_file, load_json_config
 from src.model_internals.loader_pipeline import ensure_llama_artifacts, load_llama_model_and_tokenizer
@@ -37,15 +42,25 @@ def parse_args() -> argparse.Namespace:
         action="store_false",
         help="Disable JAX mesh during model load.",
     )
+    parser.add_argument("--stage1-batch-size", type=int, default=1, help="Stage 1 smoke batch size.")
+    parser.add_argument("--stage2-batch-size", type=int, default=1, help="Stage 2 smoke batch size.")
+    parser.add_argument("--dtype", default="bfloat16", choices=["bfloat16", "float32"], help="Model dtype.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
 
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = PROJECT_ROOT
     load_dotenv_file(project_root / ".env")
     cfg = load_json_config(project_root / "configs" / "workflow_paths.json", project_root)
+    try:
+        import jax
+
+        print("JAX backend:", jax.default_backend())
+        print("JAX devices:", [str(d) for d in jax.devices()])
+    except Exception as exc:
+        print("WARNING: could not query JAX backend:", exc)
 
     stage1_smoke = Path(
         cfg.get(
@@ -85,7 +100,7 @@ def main() -> int:
     print("  Artifacts:", art)
 
     print("[3/5] Loading model/tokenizer...")
-    loaded = load_llama_model_and_tokenizer(local_dir=llama_dir, dtype="bfloat16", use_mesh=args.use_mesh)
+    loaded = load_llama_model_and_tokenizer(local_dir=llama_dir, dtype=args.dtype, use_mesh=args.use_mesh)
     llama_model = loaded["llama_model"]
     print("  Model load:", {k: loaded[k] for k in ("llama_dir", "num_devices", "dtype", "mesh_enabled")})
 
@@ -96,7 +111,7 @@ def main() -> int:
         llama_model=llama_model,
         learning_rate=1e-4,
         num_epochs=1,
-        batch_size=2,
+        batch_size=args.stage1_batch_size,
         log_every=10,
         overwrite=args.overwrite,
         seed=0,
@@ -112,7 +127,7 @@ def main() -> int:
         llama_model=llama_model,
         learning_rate=1e-5,
         num_epochs=1,
-        batch_size=2,
+        batch_size=args.stage2_batch_size,
         log_every=10,
         overwrite=args.overwrite,
     )
