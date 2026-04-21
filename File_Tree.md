@@ -102,31 +102,69 @@
 ├── 📁 group2_baseline
 │   ├── 📁 configs
 │   │   └── ⚙️ workflow_paths.json
+│   ├── 📁 data
+│   │   ├── 📁 processed
+│   │   │   ├── 📁 stage2_features
+│   │   │   │   ├── 📄 000000002963.npy
+│   │   │   │   ├── 📄 000000003464.npy
+│   │   │   │   ├── 📄 000000003481.npy...
+│   │   │   │   └── 📄 000000581899.npy
+│   │   │   └── 📁 stage2_instruction
+│   │   │       ├── 📁 gemma
+│   │   │       │   ├── 📄 stage2_dataset.jsonl
+│   │   │       │   ├── ⚙️ stage2_tokenized_train.json
+│   │   │       │   ├── 📄 stage2_train.jsonl
+│   │   │       │   └── 📄 stage2_val.jsonl
+│   │   │       ├── 📁 llama
+│   │   │       │   ├── 📄 stage2_dataset.jsonl
+│   │   │       │   ├── 📄 stage2_train.jsonl
+│   │   │       │   └── 📄 stage2_val.jsonl
+│   │   │       ├── 📁 qwen
+│   │   │       │   ├── 📄 stage2_dataset.jsonl
+│   │   │       │   ├── 📄 stage2_train.jsonl
+│   │   │       │   └── 📄 stage2_val.jsonl
+│   │   │       ├── ⚙️ all_results_manual.json
+│   │   │       ├── ⚙️ dataset_quality_diagnostics.json
+│   │   │       ├── ⚙️ prompt_alignment_audit.json
+│   │   │       ├── ⚙️ qualitative_comparison_samples.json
+│   │   │       ├── ⚙️ shared_quality_pool.json
+│   │   │       └── ⚙️ shared_split.json
+│   │   └── 📁 raw
+│   │       └── 📄 train2017
 │   ├── 📁 notebooks
 │   │   └── 📄 LLaVA_Group2_Workflow.ipynb
 │   ├── 📁 notes
 │   │   ├── 📝 CELL_TO_MODULE_MAPPING.md
+│   │   ├── 📝 DATA_DIRECTORY_GUIDE.md
 │   │   ├── 📝 GROUP2_UNIQUE_COMPONENTS.md
 │   │   └── 📝 MIGRATION_TRACE.md
 │   ├── 📁 scripts
 │   │   └── 🐍 run_group2_nonmodel.py
 │   ├── 📁 src
 │   │   ├── 📁 group2_stage2
+│   │   │   ├── 📁 data
+│   │   │   │   ├── 🐍 __init__.py
+│   │   │   │   ├── 🐍 audit.py
+│   │   │   │   ├── 🐍 features.py
+│   │   │   │   ├── 🐍 manifests.py
+│   │   │   │   ├── 🐍 pipeline.py
+│   │   │   │   ├── 🐍 splits.py
+│   │   │   │   └── 🐍 tokenization.py
+│   │   │   ├── 📁 eval
+│   │   │   │   ├── 🐍 __init__.py
+│   │   │   │   ├── 🐍 evaluation_pack.py
+│   │   │   │   ├── 🐍 quality_eval.py
+│   │   │   │   └── 🐍 reporting.py
+│   │   │   ├── 📁 experiments
+│   │   │   │   ├── 🐍 __init__.py
+│   │   │   │   ├── 🐍 experiment_tracking.py
+│   │   │   │   ├── 🐍 quantity_ablation.py
+│   │   │   │   └── 🐍 training_orchestration.py
 │   │   │   ├── 🐍 __init__.py
-│   │   │   ├── 🐍 audit.py
-│   │   │   ├── 🐍 common.py
-│   │   │   ├── 🐍 evaluation_pack.py
-│   │   │   ├── 🐍 experiment_tracking.py
-│   │   │   ├── 🐍 features.py
-│   │   │   ├── 🐍 manifests.py
-│   │   │   ├── 🐍 pipeline.py
-│   │   │   ├── 🐍 quality_eval.py
-│   │   │   ├── 🐍 quantity_ablation.py
-│   │   │   ├── 🐍 reporting.py
-│   │   │   ├── 🐍 splits.py
-│   │   │   ├── 🐍 tokenization.py
-│   │   │   └── 🐍 training_orchestration.py
+│   │   │   ├── 🐍 bootstrap_runtime.py
+│   │   │   └── 🐍 common.py
 │   │   └── 🐍 __init__.py
+│   ├── ⚙️ .gitignore
 │   ├── 📝 SETUP.md
 │   └── 📄 requirements.txt
 └── 📝 File_Tree.md
