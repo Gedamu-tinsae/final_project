@@ -7,3 +7,4 @@ tensorflow
 tensorflow_datasets
 tensorboardX
 grain
+matplotlib
