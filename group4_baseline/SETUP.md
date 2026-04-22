@@ -1,6 +1,8 @@
 # Group 4 Baseline Setup (Parameter-Efficient Tuning Track)
 
 Group 4 builds on top of Group 1 and Group 2 artifacts.
+The Group4 PEFT backbones are now vendored under:
+- `src/group4_backbones/`
 
 ## 1) Use Group1 environment
 
@@ -66,6 +68,12 @@ cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/py
 Outputs from each run:
 - `artifacts/peft_smoke/*_metrics.json`
 - optional append into `data/processed/group4_results_manual.json`
+
+Key presentation metrics now logged per run:
+- `trainable_params_total`, `trainable_params_millions`
+- `loss_first`, `loss_last`
+- `wall_time_sec`, `steps_per_sec`, `samples_per_sec`
+- `gpu_stats` (avg/max GPU util, avg/max memory used, avg/max power)
 
 ## 6) After training runs are executed
 

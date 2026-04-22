@@ -12,7 +12,11 @@ import importlib.util
 import json
 import pickle
 import random
+import statistics
+import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -158,6 +162,80 @@ def _count_params(tree, mask=None) -> int:
         if bool(m) and hasattr(x, "size"):
             total += int(x.size)
     return int(total)
+
+
+def _query_gpu_snapshot() -> dict[str, float] | None:
+    try:
+        out = subprocess.check_output(
+            [
+                "nvidia-smi",
+                "--query-gpu=utilization.gpu,memory.used,memory.total,power.draw",
+                "--format=csv,noheader,nounits",
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return None
+
+    if not out:
+        return None
+
+    first = out.splitlines()[0]
+    parts = [p.strip() for p in first.split(",")]
+    if len(parts) < 4:
+        return None
+
+    try:
+        return {
+            "gpu_util_pct": float(parts[0]),
+            "gpu_mem_used_mb": float(parts[1]),
+            "gpu_mem_total_mb": float(parts[2]),
+            "gpu_power_w": float(parts[3]),
+        }
+    except Exception:
+        return None
+
+
+class _GPUSampler:
+    def __init__(self, interval_sec: float = 2.0) -> None:
+        self.interval_sec = interval_sec
+        self._samples: list[dict[str, float]] = []
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        def loop() -> None:
+            while not self._stop.is_set():
+                s = _query_gpu_snapshot()
+                if s is not None:
+                    self._samples.append(s)
+                self._stop.wait(self.interval_sec)
+
+        self._thread = threading.Thread(target=loop, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+
+    def summary(self) -> dict[str, Any] | None:
+        if not self._samples:
+            return None
+        util = [s["gpu_util_pct"] for s in self._samples]
+        mem = [s["gpu_mem_used_mb"] for s in self._samples]
+        pwr = [s["gpu_power_w"] for s in self._samples]
+        return {
+            "num_samples": len(self._samples),
+            "gpu_util_avg_pct": statistics.fmean(util),
+            "gpu_util_max_pct": max(util),
+            "gpu_mem_used_avg_mb": statistics.fmean(mem),
+            "gpu_mem_used_max_mb": max(mem),
+            "gpu_power_avg_w": statistics.fmean(pwr),
+            "gpu_power_max_w": max(pwr),
+            "gpu_mem_total_mb": self._samples[-1]["gpu_mem_total_mb"],
+        }
 
 
 def parse_args() -> argparse.Namespace:
@@ -325,14 +403,27 @@ def main() -> int:
     manifest_rows = json.loads(smoke_manifest.read_text(encoding="utf-8"))
     step = 0
     losses: list[float] = []
+    samples_seen = 0
+    timer_start = time.perf_counter()
+    gpu_sampler = _GPUSampler(interval_sec=2.0)
+    gpu_sampler.start()
     for epoch in range(args.epochs):
         for batch in iterate_minibatches(manifest_rows, batch_size=args.batch_size):
             projector_state, llama_state, opt_state, loss = train_step(projector_state, llama_state, opt_state, batch)
             lv = float(loss)
             losses.append(lv)
+            if "input_ids" in batch and hasattr(batch["input_ids"], "shape"):
+                samples_seen += int(batch["input_ids"].shape[0])
+            else:
+                samples_seen += int(args.batch_size)
             if step % args.log_every == 0:
                 print(f"epoch={epoch} step={step} loss={lv:.4f}")
             step += 1
+    gpu_sampler.stop()
+    wall_time_sec = max(1e-9, time.perf_counter() - timer_start)
+    steps_per_sec = float(step) / wall_time_sec
+    samples_per_sec = float(samples_seen) / wall_time_sec
+    gpu_stats = gpu_sampler.summary()
 
     run_id = (
         f"{args.method}"
@@ -376,11 +467,29 @@ def main() -> int:
         "trainable_params_millions": total_trainable / 1_000_000.0,
         "selected_leaves": selected_count,
         "candidate_leaves": candidate_count,
+        "wall_time_sec": wall_time_sec,
+        "steps_per_sec": steps_per_sec,
+        "samples_per_sec": samples_per_sec,
+        "gpu_stats": gpu_stats,
         "projector_state_path": str(out_projector),
         "llama_state_path": str(out_llama),
     }
     out_metrics.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
     print("saved metrics:", out_metrics)
+    print(
+        "performance:",
+        f"wall_time_sec={wall_time_sec:.2f}",
+        f"steps_per_sec={steps_per_sec:.3f}",
+        f"samples_per_sec={samples_per_sec:.3f}",
+    )
+    if gpu_stats is not None:
+        print(
+            "gpu:",
+            f"util_avg={gpu_stats['gpu_util_avg_pct']:.1f}%",
+            f"util_max={gpu_stats['gpu_util_max_pct']:.1f}%",
+            f"mem_max={gpu_stats['gpu_mem_used_max_mb']:.1f}MB",
+            f"power_avg={gpu_stats['gpu_power_avg_w']:.1f}W",
+        )
 
     if args.append_manual_results:
         manual_path = Path(cfg["group4_outputs"]["results_manual_json"])
