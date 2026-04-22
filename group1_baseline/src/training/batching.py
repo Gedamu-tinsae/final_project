@@ -3,6 +3,7 @@
 import random
 
 import numpy as np
+import jax.numpy as jnp
 
 
 def pad_list(x, length, pad_value):
@@ -18,7 +19,15 @@ def stage1_collate_fn(batch):
     labels = []
 
     for sample in batch:
-        vf = np.load(sample["vision_path"])
+        vf = np.load(sample["vision_path"], allow_pickle=False)
+        # Some saved CLIP files contain bf16 payloads encoded as NumPy void (|V2).
+        # Convert them to real numeric float32 before passing to JAX.
+        if vf.dtype.kind == "V" and vf.dtype.itemsize == 2:
+            vf = np.array(jnp.asarray(vf.view(np.uint16), dtype=jnp.bfloat16), dtype=np.float32)
+        elif not np.issubdtype(vf.dtype, np.number):
+            raise TypeError(f"Unsupported vision feature dtype: {vf.dtype} in {sample['vision_path']}")
+        else:
+            vf = vf.astype(np.float32, copy=False)
         vision_feats.append(vf)
 
         input_ids.append(pad_list(sample["input_ids"], max_text_len, 0))
@@ -43,4 +52,3 @@ def iterate_minibatches(data, batch_size):
     for i in range(0, len(idxs), batch_size):
         batch = [data[j] for j in idxs[i : i + batch_size]]
         yield stage1_collate_fn(batch)
-

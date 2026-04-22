@@ -23,7 +23,7 @@ Context for this project:
 import jax
 import jax.numpy as jnp
 from tunix.models import safetensors_loader
-from tunix.models.llama3 import model as model_lib
+from . import model as model_lib
 
 
 def _get_key_and_transform_mapping(cfg: model_lib.ModelConfig):

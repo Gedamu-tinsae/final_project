@@ -35,7 +35,8 @@ def precompute_clip_features(
         pixel_values = jnp.array(clip_inputs["pixel_values"])
 
         vision_outputs = clip_bundle.model.vision_model(pixel_values=pixel_values)
-        vision_feats = np.array(vision_outputs.last_hidden_state[0])  # [N_vis, D_clip]
+        # Persist as float32 to avoid bf16/void-dtype issues when loading with NumPy later.
+        vision_feats = np.array(vision_outputs.last_hidden_state[0], dtype=np.float32)  # [N_vis, D_clip]
 
         # Save features with same basename as image.
         save_path = os.path.join(output_dir, sample["image"].replace(".jpg", ".npy"))

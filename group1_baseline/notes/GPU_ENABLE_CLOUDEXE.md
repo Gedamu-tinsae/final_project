@@ -111,3 +111,32 @@ cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/py
 ```
 
 This avoids RTX 3050 VRAM limits and is the preferred route until TPU is ready.
+
+### 3b) Run notebook-equivalent core stages (guarded CLI)
+
+This runs the same core stage sequence as notebook (1->7), with skip-safe behavior by default.
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group1_baseline/scripts/run_baseline_workflow.py \
+  --train both --smoke --smoke-rows 64 --batch-size 1 --epochs 1 --no-mesh
+```
+
+Notes:
+- `--overwrite` is optional; leave it off to avoid re-running expensive outputs.
+- `--train none` will run only data/tokenize/features/manifests + checks.
+
+## Troubleshooting: `ShardingTypeError` during Stage 5 on GPU
+
+If you hit an error like:
+
+- `ShardingTypeError ... out sharding could not be resolved ...`
+- Often near `llama_model.embedder.encode(...)`
+
+run smoke with mesh disabled:
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group1_baseline/scripts/run_tpu_smoke.py \
+  --max-rows 64 --stage1-batch-size 1 --stage2-batch-size 1 --dtype bfloat16 --no-mesh
+```
+
+Reason: on some single-GPU runs, mesh sharding can cause ambiguous gather sharding in JAX/NNX paths.
