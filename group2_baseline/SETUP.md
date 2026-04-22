@@ -50,3 +50,51 @@ Use conservative settings first:
    - run one variant experiment at a time
 
 This avoids accidental full recompute/training spend on GPU.
+
+## 5) Script workflow (notebook-equivalent orchestration)
+
+Use CloudExe style as the default execution path:
+
+```bash
+# All safe orchestration stages
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages all
+
+# Stage 1-3 only
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 1,2,3
+
+# Stage 2 prep for all variants + train/val splits
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 2 --stage2-variants all --stage2-splits train,val
+
+# Quantity stage with input preparation
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 5 --stage5-prepare-inputs
+```
+
+
+By default, `overwrite=False`, so existing expensive artifacts are reused/skipped.
+
+### Recommended smoke check before Group 4 work
+
+CloudExe style (recommended):
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py \
+  --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val
+```
+
+What this does:
+- `--stages 1,2,3,6`: runs audit/split, stage2 prep, quality artifacts, and heldout/pairwise generation
+- `--stage2-variants baseline`: only baseline variant (fast + safe)
+- `--stage2-splits val`: only validation split prep (smaller than train+val)
+
+### Stage 4/5 sanity checks (CloudExe style)
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 4
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 5
+```
+
+Expected before full experiments:
+- Stage 4 may report missing variants in `all_results_manual.json`
+- Stage 5 may report missing `engine_comparison_summary.json`
+
+These are acceptable gating messages; traceback exceptions are the real failures.
