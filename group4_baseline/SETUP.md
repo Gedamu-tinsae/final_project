@@ -75,7 +75,22 @@ Key presentation metrics now logged per run:
 - `wall_time_sec`, `steps_per_sec`, `samples_per_sec`
 - `gpu_stats` (avg/max GPU util, avg/max memory used, avg/max power)
 
-## 6) After training runs are executed
+## 6) LoRA vs Selective-FT comparison flow (for slides)
+
+Run at least one LoRA config and one selective-FT config, then compare:
+1. Efficiency: `trainable_params_millions`
+2. Quality: `loss_last` (plus `val_loss` / `win_rate_vs_baseline` when available)
+3. Compute cost: `wall_time_sec`, `steps_per_sec`, `gpu_stats`
+
+Suggested smoke pair:
+- LoRA: `--method lora --lora-variant qv --target-modules qv`
+- Selective FT: `--method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0`
+
+Important:
+- `run_group4_peft_smoke.py` logs training-side metrics automatically.
+- `val_loss` and `win_rate_vs_baseline` are not auto-produced by the smoke runner; fill them after evaluation.
+
+## 7) After training runs are executed
 
 Populate:
 - `data/processed/group4_results_manual.json`
