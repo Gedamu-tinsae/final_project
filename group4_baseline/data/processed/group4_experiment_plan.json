@@ -1,0 +1,104 @@
+{
+  "project_root": "/root/final_project/group4_baseline",
+  "group1_root": "/root/final_project/group4_baseline/../group1_baseline",
+  "group2_root": "/root/final_project/group4_baseline/../group2_baseline",
+  "num_experiments": 12,
+  "experiments": [
+    {
+      "experiment_id": "g4_lora_001",
+      "method": "lora",
+      "lora_rank": 4,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_lora_002",
+      "method": "lora",
+      "lora_rank": 4,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_lora_003",
+      "method": "lora",
+      "lora_rank": 8,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_lora_004",
+      "method": "lora",
+      "lora_rank": 8,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_lora_005",
+      "method": "lora",
+      "lora_rank": 16,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_lora_006",
+      "method": "lora",
+      "lora_rank": 16,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_007",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 0.1,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_008",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 0.1,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_009",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 0.5,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_010",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 0.5,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_011",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 1.0,
+      "target_modules": "qv",
+      "train_budget_steps": 500,
+      "seed": 42
+    },
+    {
+      "experiment_id": "g4_sft_012",
+      "method": "selective_ft",
+      "unfreeze_budget_pct": 1.0,
+      "target_modules": "qv_mlp",
+      "train_budget_steps": 500,
+      "seed": 42
+    }
+  ]
+}

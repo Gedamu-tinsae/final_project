@@ -1,0 +1,77 @@
+{
+  "num_entries": 12,
+  "entries": [
+    {
+      "experiment_id": "g4_lora_001",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_001",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_lora_002",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_002",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_lora_003",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_003",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_lora_004",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_004",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_lora_005",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_005",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_lora_006",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_lora_006",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_007",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_007",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_008",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_008",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_009",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_009",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_010",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_010",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_011",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_011",
+      "notes": "Fill in with actual training command + metrics after execution."
+    },
+    {
+      "experiment_id": "g4_sft_012",
+      "status": "pending",
+      "output_dir": "/root/final_project/group4_baseline/artifacts/group4/g4_sft_012",
+      "notes": "Fill in with actual training command + metrics after execution."
+    }
+  ]
+}

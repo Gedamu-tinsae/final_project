@@ -1,0 +1,31 @@
+{
+  "project_root": "${PROJECT_ROOT}",
+  "group1_root": "${PROJECT_ROOT}/../group1_baseline",
+  "group2_root": "${PROJECT_ROOT}/../group2_baseline",
+
+  "required_inputs": {
+    "group1_stage1_manifest": "${PROJECT_ROOT}/../group1_baseline/data/processed/stage1_alignment/stage1_manifest.json",
+    "group1_stage2_manifest": "${PROJECT_ROOT}/../group1_baseline/data/processed/stage2_finetuning/stage2_manifest.json",
+    "group1_stage1_projector_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/projector_stage1.pkl",
+    "group1_stage2_projector_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/projector_stage2.pkl",
+    "group1_stage2_llama_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/llama_stage2.pkl",
+    "group2_engine_summary": "${PROJECT_ROOT}/../group2_baseline/data/processed/stage2_instruction/engine_comparison_summary.json"
+  },
+
+  "group4_outputs": {
+    "plan_json": "${PROJECT_ROOT}/data/processed/group4_experiment_plan.json",
+    "run_registry_json": "${PROJECT_ROOT}/data/processed/group4_run_registry.json",
+    "results_manual_json": "${PROJECT_ROOT}/data/processed/group4_results_manual.json",
+    "summary_json": "${PROJECT_ROOT}/data/processed/group4_results_summary.json",
+    "summary_md": "${PROJECT_ROOT}/data/processed/group4_results_summary.md"
+  },
+
+  "experiment_space": {
+    "methods": ["lora", "selective_ft"],
+    "lora_ranks": [4, 8, 16],
+    "target_modules": ["qv", "qv_mlp"],
+    "selective_ft_budget_pct": [0.1, 0.5, 1.0],
+    "train_budget_steps": 500,
+    "seed": 42
+  }
+}
