@@ -86,3 +86,28 @@ Keep `--overwrite` off unless you intentionally want regeneration.
 
 - HW4-style `cloudexe --gpuspec ... -- <cmd>` is for requesting a specific GPU job environment (for example H100).
 - On this server, GPU can already be present; the missing piece is usually CUDA-enabled `jaxlib` in the venv.
+
+## Recommended for this project: CloudExe H100 wrapper
+
+For heavy model load/training, use CloudExe GPU allocation directly (H100), not the small local server GPU.
+
+### 1) Confirm allocated GPU
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /usr/bin/nvidia-smi
+```
+
+### 2) Run accelerator check inside allocation
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group1_baseline/scripts/check_accelerator.py
+```
+
+### 3) Run Group1 smoke inside allocation
+
+```bash
+cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group1_baseline/scripts/run_tpu_smoke.py \
+  --max-rows 64 --stage1-batch-size 1 --stage2-batch-size 1 --dtype bfloat16
+```
+
+This avoids RTX 3050 VRAM limits and is the preferred route until TPU is ready.
