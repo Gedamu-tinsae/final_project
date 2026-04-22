@@ -225,6 +225,7 @@ class LoRAEinsum(nnx.Module):
   ):
     # Initialize the base frozen weights
     self.base = Einsum(einsum_str=einsum_str, shape=shape, rngs=rngs, sharding=sharding)
+    self.shape = shape
     self.r = r
     self.alpha = alpha
 
@@ -267,6 +268,7 @@ class LoRAOutputEinsum(nnx.Module):
         sharding: Tuple[str | None, ...],
     ):
         self.base = Einsum(einsum_str=einsum_str, shape=shape, rngs=rngs, sharding=sharding)
+        self.shape = shape
         self.r = r
         self.alpha = alpha
 
@@ -792,3 +794,4 @@ class Llama3(BackendMappingMixin, nnx.Module, pytree=False):
   @property
   def num_embed(self) -> int:
     return self.config.embed_dim
+

@@ -164,6 +164,20 @@ def _count_params(tree, mask=None) -> int:
     return int(total)
 
 
+def _materialize_abstract_leaves(tree: Any) -> tuple[Any, int]:
+    """Replace ShapeDtypeStruct leaves with concrete zero arrays for JIT compatibility."""
+    replaced = 0
+
+    def to_array(x):
+        nonlocal replaced
+        if isinstance(x, jax.ShapeDtypeStruct):
+            replaced += 1
+            return jnp.zeros(x.shape, dtype=x.dtype)
+        return x
+
+    return jax.tree_util.tree_map(to_array, tree), replaced
+
+
 def _query_gpu_snapshot() -> dict[str, float] | None:
     try:
         out = subprocess.check_output(
@@ -253,6 +267,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--budget-pct", type=float, default=1.0, help="Selective FT budget percentage of candidate leaves.")
     p.add_argument("--max-rows", type=int, default=64)
     p.add_argument("--batch-size", type=int, default=1)
+    p.add_argument("--val-frac", type=float, default=0.2, help="Fraction of smoke rows held out for validation.")
     p.add_argument("--epochs", type=int, default=1)
     p.add_argument("--log-every", type=int, default=10)
     p.add_argument("--learning-rate", type=float, default=1e-5)
@@ -335,6 +350,9 @@ def main() -> int:
         projector_state = pickle.load(f)
 
     llama_graphdef, llama_state = nnx.split(llama_model)
+    llama_state, replaced = _materialize_abstract_leaves(llama_state)
+    if replaced:
+        print(f"materialized abstract leaves in llama_state: {replaced}")
 
     if args.method == "lora":
         llama_mask = _build_lora_mask(llama_state)
@@ -401,6 +419,18 @@ def main() -> int:
         return new_projector_state, new_llama_state, opt_state_new, loss
 
     manifest_rows = json.loads(smoke_manifest.read_text(encoding="utf-8"))
+    if not manifest_rows:
+        raise ValueError("Smoke manifest is empty.")
+
+    val_count = max(1, int(round(len(manifest_rows) * float(args.val_frac))))
+    if val_count >= len(manifest_rows):
+        val_count = max(1, len(manifest_rows) - 1)
+    train_rows = manifest_rows[:-val_count]
+    val_rows = manifest_rows[-val_count:]
+    if not train_rows:
+        train_rows = manifest_rows[:1]
+        val_rows = manifest_rows[1:] or manifest_rows[:1]
+    print(f"split: train_rows={len(train_rows)} val_rows={len(val_rows)} val_frac={args.val_frac}")
     step = 0
     losses: list[float] = []
     samples_seen = 0
@@ -408,12 +438,17 @@ def main() -> int:
     gpu_sampler = _GPUSampler(interval_sec=2.0)
     gpu_sampler.start()
     for epoch in range(args.epochs):
-        for batch in iterate_minibatches(manifest_rows, batch_size=args.batch_size):
+        for batch in iterate_minibatches(train_rows, batch_size=args.batch_size):
             projector_state, llama_state, opt_state, loss = train_step(projector_state, llama_state, opt_state, batch)
             lv = float(loss)
             losses.append(lv)
-            if "input_ids" in batch and hasattr(batch["input_ids"], "shape"):
-                samples_seen += int(batch["input_ids"].shape[0])
+            input_ids_obj = batch.get("input_ids") if isinstance(batch, dict) else None
+            input_shape = getattr(input_ids_obj, "shape", None)
+            if input_shape is not None:
+                try:
+                    samples_seen += int(input_shape[0])
+                except Exception:
+                    samples_seen += int(args.batch_size)
             else:
                 samples_seen += int(args.batch_size)
             if step % args.log_every == 0:
@@ -424,6 +459,25 @@ def main() -> int:
     steps_per_sec = float(step) / wall_time_sec
     samples_per_sec = float(samples_seen) / wall_time_sec
     gpu_stats = gpu_sampler.summary()
+
+    @nnx.jit
+    def eval_step(projector_state, llama_state, batch):
+        proj = nnx.merge(projector_graphdef, projector_state)
+        llm = nnx.merge(llama_graphdef, llama_state)
+        mm = make_multimodal_inputs(llm, proj, batch)
+        logits, _ = llm.forward_from_embeddings(
+            input_embeds=mm["input_embeds"],
+            positions=mm["positions"],
+            cache=None,
+            attention_mask=mm["attention_mask"],
+        )
+        return masked_cross_entropy_loss(logits, mm["labels"])
+
+    val_losses: list[float] = []
+    for batch in iterate_minibatches(val_rows, batch_size=args.batch_size):
+        val_losses.append(float(eval_step(projector_state, llama_state, batch)))
+    val_loss = float(sum(val_losses) / max(1, len(val_losses)))
+    print(f"validation: val_loss={val_loss:.4f} batches={len(val_losses)}")
 
     run_id = (
         f"{args.method}"
@@ -460,6 +514,7 @@ def main() -> int:
         "steps": step,
         "loss_first": losses[0] if losses else None,
         "loss_last": losses[-1] if losses else None,
+        "val_loss": val_loss,
         "projector_params": projector_param_count,
         "llama_params_total": llama_param_count,
         "llama_params_trainable": llama_trainable_count,
@@ -512,9 +567,9 @@ def main() -> int:
                 "trainable_params_millions": total_trainable / 1_000_000.0,
                 "smoke_loss_first": losses[0] if losses else None,
                 "smoke_loss_last": losses[-1] if losses else None,
-                "win_rate_vs_baseline": None,
-                "val_loss": None,
-                "notes": "Auto-appended from run_group4_peft_smoke.py; fill win_rate_vs_baseline and val_loss after eval.",
+                "win_rate_vs_baseline": 0.0,
+                "val_loss": val_loss,
+                "notes": "Auto-appended from run_group4_peft_smoke.py; replace win_rate_vs_baseline after pairwise eval.",
             }
         )
         manual["results"] = results
@@ -526,3 +581,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

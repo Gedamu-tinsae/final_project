@@ -16,6 +16,7 @@
 
 import importlib.util
 from pathlib import Path
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -35,7 +36,7 @@ def _load_local_model_module():
 model_lib = _load_local_model_module()
 
 
-def _get_key_and_transform_mapping(cfg: model_lib.ModelConfig):
+def _get_key_and_transform_mapping(cfg: Any):
   # Mapping of torch_keys -> (nnx_keys, (permute_rule, reshape_rule)).
   return {
       r"model\.embed_tokens\.weight": ("embedder.input_embedding", None),
@@ -94,10 +95,10 @@ def _get_key_and_transform_mapping(cfg: model_lib.ModelConfig):
 
 def create_model_from_safe_tensors(
     file_dir: str,
-    config: model_lib.ModelConfig,
+    config: Any,
     mesh: jax.sharding.Mesh | None = None,
     dtype: jnp.dtype | None = None,
-) -> model_lib.Llama3:
+) -> Any:
   """Load tensors from the safetensors file and create a Llama3 model."""
   return safetensors_loader.load_and_create_model(
       file_dir=file_dir,
@@ -107,4 +108,6 @@ def create_model_from_safe_tensors(
       mesh=mesh,
       preprocess_fn=None,
       dtype=dtype,
+      mode="original",
   )
+

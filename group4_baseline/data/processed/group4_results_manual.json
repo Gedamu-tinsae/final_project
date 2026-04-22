@@ -1,0 +1,46 @@
+{
+  "results": [
+    {
+      "experiment_id": "lora_lora-qv_target-qv_rows-64_seed-42",
+      "method": "lora",
+      "lora_variant": "qv",
+      "target_modules": "qv",
+      "selection_strategy": null,
+      "budget_pct": null,
+      "trainable_params_millions": 2.424832,
+      "smoke_loss_first": 3.941173791885376,
+      "smoke_loss_last": 4.150250434875488,
+      "win_rate_vs_baseline": 0.0,
+      "val_loss": 2.961722869139451,
+      "notes": "Auto-appended from run_group4_peft_smoke.py; replace win_rate_vs_baseline after pairwise eval."
+    },
+    {
+      "experiment_id": "selective_ft_lora-na_target-qv_rows-64_seed-42",
+      "method": "selective_ft",
+      "lora_variant": null,
+      "target_modules": "qv",
+      "selection_strategy": "magnitude",
+      "budget_pct": 1.0,
+      "trainable_params_millions": 5.767168,
+      "smoke_loss_first": 3.6167526245117188,
+      "smoke_loss_last": 2.7299981117248535,
+      "win_rate_vs_baseline": 0.0,
+      "val_loss": 2.9638091050661526,
+      "notes": "Auto-appended from run_group4_peft_smoke.py; replace win_rate_vs_baseline after pairwise eval."
+    },
+    {
+      "experiment_id": "lora_lora-all_weights_target-all_rows-64_seed-42",
+      "method": "lora",
+      "lora_variant": "all_weights",
+      "target_modules": "all",
+      "selection_strategy": null,
+      "budget_pct": null,
+      "trainable_params_millions": 7.20896,
+      "smoke_loss_first": 2.042376756668091,
+      "smoke_loss_last": 3.154897689819336,
+      "win_rate_vs_baseline": 0.0,
+      "val_loss": 2.9623886071718655,
+      "notes": "Auto-appended from run_group4_peft_smoke.py; replace win_rate_vs_baseline after pairwise eval."
+    }
+  ]
+}
