@@ -142,3 +142,113 @@ python scripts/run_tpu_smoke.py --max-rows 64 --stage1-batch-size 1 --stage2-bat
 Notes:
 - Keep `--overwrite` off unless you intentionally want to regenerate artifacts.
 - Use small `--max-rows` first to validate pipeline wiring before full runs.
+
+## 9) Logging full runs with tee
+
+Use the wrapper script (recommended). It handles:
+- log file creation
+- meta file creation
+- correct `cloudexe | tee` exit-code handling
+- GPU backend verification inside CloudExe entry (`REQUIRE_GPU=1` by default)
+- no fragile shell variables required
+
+```bash
+cd /root/final_project/group1_baseline
+./scripts/run_group1_full_logged.sh
+```
+
+Optional args:
+
+```bash
+./scripts/run_group1_full_logged.sh --overwrite --train none
+./scripts/run_group1_full_logged.sh --overwrite --train stage1
+./scripts/run_group1_full_logged.sh --overwrite --train stage2
+./scripts/run_group1_full_logged.sh --overwrite --train both --smoke --smoke-rows 128
+```
+
+Optional GPU override:
+
+```bash
+GPUSPEC=EUNH100x1 ./scripts/run_group1_full_logged.sh
+```
+
+If you need to allow CPU fallback temporarily:
+
+```bash
+REQUIRE_GPU=0 ./scripts/run_group1_full_logged.sh
+```
+
+Logs are written to:
+- `/root/final_project/logs/runs/*_group1_full.log`
+- `/root/final_project/logs/runs/*_group1_full.meta.txt`
+
+Monitor the latest log:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group1_full.log
+```
+
+### tmux variant
+
+1. Start tmux:
+
+```bash
+tmux new -s g1_full
+```
+
+2. Inside tmux, run:
+
+```bash
+cd /root/final_project/group1_baseline
+./scripts/run_group1_full_logged.sh
+```
+
+3. Detach without stopping: `Ctrl+b`, then `d`
+
+4. Reattach later:
+
+```bash
+tmux attach -t g1_full
+```
+
+5. Monitor log from another shell:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group1_full.log
+```
+
+## 10) Stage 5-7 training-only logged scripts
+
+When Stage 1-4 are already complete, use these instead of full rerun.
+
+### A) Full training continuation (no mesh)
+
+```bash
+cd /root/final_project/group1_baseline
+./scripts/run_group1_train_nomesh_logged.sh
+```
+
+Default args:
+- `--train both --no-mesh`
+
+### B) Small-budget training continuation (recommended for fast iteration)
+
+```bash
+cd /root/final_project/group1_baseline
+./scripts/run_group1_train_smoke_nomesh_logged.sh
+```
+
+Default args:
+- `--train both --no-mesh --smoke --smoke-rows 256 --batch-size 1 --epochs 1`
+
+Override example:
+
+```bash
+./scripts/run_group1_train_smoke_nomesh_logged.sh --train both --no-mesh --smoke --smoke-rows 512 --batch-size 1 --epochs 1
+```
+
+Logs/meta for both scripts:
+- `/root/final_project/logs/runs/*_group1_train_nomesh.log`
+- `/root/final_project/logs/runs/*_group1_train_nomesh.meta.txt`
+- `/root/final_project/logs/runs/*_group1_train_smoke_nomesh.log`
+- `/root/final_project/logs/runs/*_group1_train_smoke_nomesh.meta.txt`

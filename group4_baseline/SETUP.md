@@ -120,3 +120,61 @@ python scripts/run_group4_workflow.py --stages 4
 Outputs:
 - `data/processed/group4_results_summary.json`
 - `data/processed/group4_results_summary.md`
+
+## 8) Logging runs with tee
+
+Use the wrapper script (recommended). It handles:
+- log file creation
+- meta file creation
+- stage-by-stage logging for workflow + PEFT runs
+- correct exit-code handling
+
+```bash
+cd /root/final_project/group4_baseline
+./scripts/run_group4_full_logged.sh
+```
+
+Optional GPU override:
+
+```bash
+GPUSPEC=EUNH100x1 ./scripts/run_group4_full_logged.sh
+```
+
+Logs are written to:
+- `/root/final_project/logs/runs/*_group4_full.log`
+- `/root/final_project/logs/runs/*_group4_full.meta.txt`
+
+Monitor the latest log:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group4_full.log
+```
+
+### tmux variant
+
+1. Start tmux:
+
+```bash
+tmux new -s g4_full
+```
+
+2. Inside tmux, run:
+
+```bash
+cd /root/final_project/group4_baseline
+./scripts/run_group4_full_logged.sh
+```
+
+3. Detach without stopping: `Ctrl+b`, then `d`
+
+4. Reattach later:
+
+```bash
+tmux attach -t g4_full
+```
+
+5. Monitor log from another shell:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group4_full.log
+```

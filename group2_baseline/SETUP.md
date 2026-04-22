@@ -69,6 +69,13 @@ cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/py
 cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py --stages 5 --stage5-prepare-inputs
 ```
 
+Fallback direct-server style (same behavior):
+
+```bash
+cd /root/final_project/group2_baseline
+source /root/final_project/group1_baseline/.venv/bin/activate
+python scripts/run_group2_workflow.py --stages all
+```
 
 By default, `overwrite=False`, so existing expensive artifacts are reused/skipped.
 
@@ -79,6 +86,14 @@ CloudExe style (recommended):
 ```bash
 cloudexe --gpuspec EUNH100x1 -- /root/final_project/group1_baseline/.venv/bin/python /root/final_project/group2_baseline/scripts/run_group2_workflow.py \
   --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val
+```
+
+Equivalent direct-server style:
+
+```bash
+cd /root/final_project/group2_baseline
+source /root/final_project/group1_baseline/.venv/bin/activate
+python scripts/run_group2_workflow.py --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val
 ```
 
 What this does:
@@ -98,3 +113,67 @@ Expected before full experiments:
 - Stage 5 may report missing `engine_comparison_summary.json`
 
 These are acceptable gating messages; traceback exceptions are the real failures.
+
+## 6) Logging runs with tee
+
+Use the wrapper script (recommended). It handles:
+- log file creation
+- meta file creation
+- correct `cloudexe | tee` exit-code handling
+- no fragile shell variables required
+
+```bash
+cd /root/final_project/group2_baseline
+./scripts/run_group2_full_logged.sh
+```
+
+Optional args:
+
+```bash
+./scripts/run_group2_full_logged.sh --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite
+```
+
+Optional GPU override:
+
+```bash
+GPUSPEC=EUNH100x1 ./scripts/run_group2_full_logged.sh
+```
+
+Logs are written to:
+- `/root/final_project/logs/runs/*_group2_full.log`
+- `/root/final_project/logs/runs/*_group2_full.meta.txt`
+
+Monitor the latest log:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group2_full.log
+```
+
+### tmux variant
+
+1. Start tmux:
+
+```bash
+tmux new -s g2_full
+```
+
+2. Inside tmux, run:
+
+```bash
+cd /root/final_project/group2_baseline
+./scripts/run_group2_full_logged.sh
+```
+
+3. Detach without stopping: `Ctrl+b`, then `d`
+
+4. Reattach later:
+
+```bash
+tmux attach -t g2_full
+```
+
+5. Monitor log from another shell:
+
+```bash
+tail -f /root/final_project/logs/runs/*_group2_full.log
+```
