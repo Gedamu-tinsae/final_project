@@ -14,7 +14,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def _utc_ts() -> str:
@@ -50,6 +50,66 @@ def _try_gpu_sample() -> dict[str, float] | None:
         return None
 
 
+_TPU_JAX_INIT = False
+_TPU_AVAILABLE = False
+_TPU_DEVICE = None
+
+
+def _try_tpu_sample() -> dict[str, float] | None:
+    global _TPU_JAX_INIT, _TPU_AVAILABLE, _TPU_DEVICE
+    try:
+        import jax  # type: ignore
+    except Exception:
+        return None
+
+    if not _TPU_JAX_INIT:
+        _TPU_JAX_INIT = True
+        try:
+            _TPU_AVAILABLE = jax.default_backend() == "tpu"
+            if _TPU_AVAILABLE:
+                devs = jax.devices()
+                _TPU_DEVICE = devs[0] if devs else None
+        except Exception:
+            _TPU_AVAILABLE = False
+            _TPU_DEVICE = None
+
+    if not _TPU_AVAILABLE or _TPU_DEVICE is None:
+        return None
+
+    try:
+        ms = _TPU_DEVICE.memory_stats()
+        if not isinstance(ms, dict):
+            return None
+        bytes_in_use = float(ms.get("bytes_in_use", 0.0))
+        bytes_limit = float(ms.get("bytes_limit", 0.0))
+        peak_bytes_in_use = float(ms.get("peak_bytes_in_use", 0.0))
+        out = {
+            "tpu_bytes_in_use": bytes_in_use,
+            "tpu_peak_bytes_in_use": peak_bytes_in_use,
+            "tpu_bytes_limit": bytes_limit,
+            "tpu_mem_used_mb": bytes_in_use / (1024.0 * 1024.0),
+            "tpu_mem_peak_mb": peak_bytes_in_use / (1024.0 * 1024.0),
+            "tpu_mem_limit_mb": bytes_limit / (1024.0 * 1024.0),
+        }
+        if bytes_limit > 0:
+            out["tpu_mem_used_pct"] = 100.0 * (bytes_in_use / bytes_limit)
+            out["tpu_mem_peak_pct"] = 100.0 * (peak_bytes_in_use / bytes_limit)
+        return out
+    except Exception:
+        return None
+
+
+def _safe_rss_kb_max() -> float:
+    try:
+        getrusage = cast(Any, getattr(resource, "getrusage", None))
+        rusage_self = cast(Any, getattr(resource, "RUSAGE_SELF", None))
+        if getrusage is None or rusage_self is None:
+            return 0.0
+        return float(getrusage(rusage_self).ru_maxrss)
+    except Exception:
+        return 0.0
+
+
 @dataclass
 class StageRecord:
     stage: str
@@ -80,7 +140,7 @@ class ResourceSampler:
         def loop() -> None:
             while not self._stop.is_set():
                 elapsed = time.perf_counter() - self._start
-                rss_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                rss_kb = _safe_rss_kb_max()
                 row: dict[str, Any] = {
                     "t_sec": elapsed,
                     "rss_kb_max": float(rss_kb),
@@ -88,6 +148,9 @@ class ResourceSampler:
                 gpu = _try_gpu_sample()
                 if gpu is not None:
                     row.update(gpu)
+                tpu = _try_tpu_sample()
+                if tpu is not None:
+                    row.update(tpu)
                 self._rows.append(row)
                 self._stop.wait(self.interval_sec)
 
@@ -129,6 +192,21 @@ class ResourceSampler:
                     "gpu_power_avg_w": sum(pwr) / max(1, len(pwr)),
                 }
             )
+        if "tpu_mem_used_mb" in self._rows[0]:
+            tmem = [float(r.get("tpu_mem_used_mb", 0.0)) for r in self._rows]
+            tpeak = [float(r.get("tpu_mem_peak_mb", 0.0)) for r in self._rows]
+            tlim = [float(r.get("tpu_mem_limit_mb", 0.0)) for r in self._rows]
+            tpct = [float(r.get("tpu_mem_used_pct", 0.0)) for r in self._rows]
+            out.update(
+                {
+                    "tpu_mem_used_avg_mb": sum(tmem) / max(1, len(tmem)),
+                    "tpu_mem_used_max_mb": max(tmem),
+                    "tpu_mem_peak_max_mb": max(tpeak),
+                    "tpu_mem_limit_mb": max(tlim) if tlim else 0.0,
+                    "tpu_mem_used_avg_pct": sum(tpct) / max(1, len(tpct)),
+                    "tpu_mem_used_max_pct": max(tpct) if tpct else 0.0,
+                }
+            )
         return out
 
     @property
@@ -163,6 +241,8 @@ class RunTracker:
                 "pid": os.getpid(),
                 "python": os.environ.get("PYTHON", ""),
                 "cwd": os.getcwd(),
+                "jax_backend": _safe_jax_backend(),
+                "jax_num_devices": _safe_jax_num_devices(),
             },
         )
         self.write_json("stage_meta.json", {"group": group, "run_id": self.run_id, "stages": []})
@@ -336,6 +416,24 @@ class _TeeWriter:
         self.b.flush()
 
 
+def _safe_jax_backend() -> str:
+    try:
+        import jax  # type: ignore
+
+        return str(jax.default_backend())
+    except Exception:
+        return "unknown"
+
+
+def _safe_jax_num_devices() -> int:
+    try:
+        import jax  # type: ignore
+
+        return int(len(jax.devices()))
+    except Exception:
+        return 0
+
+
 def _try_make_stage_timing_plot(run_dir: Path, stage_records: list[StageRecord]) -> None:
     if not stage_records:
         return
@@ -458,7 +556,7 @@ def _try_make_overview_dashboard(run_dir: Path) -> None:
     for i in range(4):
         ax = axes[i]
         if i < len(existing):
-            img = mpimg.imread(existing[i])
+            img = mpimg.imread(str(existing[i]))
             ax.imshow(img)
             ax.set_title(existing[i].name)
         ax.axis("off")
