@@ -21,7 +21,7 @@ def _expand_project_root(cfg: dict, project_root: Path) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Group2 non-model prep (audit + shared split).")
-    parser.add_argument("--config", default="configs/workflow_paths.json")
+    parser.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 

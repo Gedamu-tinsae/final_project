@@ -27,7 +27,7 @@ fi
 
 declare -a workflow_args
 if [[ "$#" -eq 0 ]]; then
-  workflow_args=(--train both --no-mesh)
+  workflow_args=(--config configs/workflow_paths_subset_10000.json --train both --no-mesh --max-rows-guard 10000)
 else
   workflow_args=("$@")
 fi

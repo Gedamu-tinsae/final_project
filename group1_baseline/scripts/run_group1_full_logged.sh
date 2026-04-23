@@ -27,7 +27,7 @@ fi
 
 declare -a workflow_args
 if [[ "$#" -eq 0 ]]; then
-  workflow_args=(--overwrite --train both)
+  workflow_args=(--config configs/workflow_paths_subset_10000.json --train both --max-rows-guard 10000)
 else
   workflow_args=("$@")
 fi

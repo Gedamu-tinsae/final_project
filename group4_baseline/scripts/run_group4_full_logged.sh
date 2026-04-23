@@ -15,6 +15,7 @@ gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_group4_workflow.py"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
+config_rel="configs/workflow_paths_subset_10000.json"
 
 for p in "$python_bin" "$workflow_script" "$peft_script"; do
   if [[ ! -e "$p" ]]; then
@@ -32,6 +33,7 @@ done
   echo "python_bin=$python_bin"
   echo "workflow_script=$workflow_script"
   echo "peft_script=$peft_script"
+  echo "config_rel=$config_rel"
   echo "log_file=$log_file"
 } > "$meta_file"
 
@@ -51,9 +53,9 @@ run_logged() {
   fi
 }
 
-run_logged "workflow_stage123" "$workflow_script" --stages 1,2,3 --overwrite
-run_logged "peft_lora_qv" "$peft_script" --method lora --lora-variant qv --target-modules qv --max-rows 64 --batch-size 1 --epochs 1 --append-manual-results --overwrite
-run_logged "peft_selective_ft_qv" "$peft_script" --method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0 --max-rows 64 --batch-size 1 --epochs 1 --append-manual-results --overwrite
+run_logged "workflow_stage123" "$workflow_script" --config "$config_rel" --stages 1,2,3 --overwrite
+run_logged "peft_lora_qv" "$peft_script" --config "$config_rel" --method lora --lora-variant qv --target-modules qv --max-rows 10000 --max-rows-guard 10000 --batch-size 1 --epochs 1 --append-manual-results --overwrite
+run_logged "peft_selective_ft_qv" "$peft_script" --config "$config_rel" --method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0 --max-rows 10000 --max-rows-guard 10000 --batch-size 1 --epochs 1 --append-manual-results --overwrite
 
 echo "exit_code=0" >> "$meta_file"
 echo "log_file=$log_file"

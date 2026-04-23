@@ -255,7 +255,7 @@ class _GPUSampler:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run Group4 PEFT smoke training.")
-    p.add_argument("--config", default="configs/workflow_paths.json")
+    p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     p.add_argument("--method", choices=["lora", "selective_ft"], required=True)
     p.add_argument(
         "--lora-variant",
@@ -267,6 +267,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--selection-strategy", choices=["magnitude", "random"], default="magnitude")
     p.add_argument("--budget-pct", type=float, default=1.0, help="Selective FT budget percentage of candidate leaves.")
     p.add_argument("--max-rows", type=int, default=64)
+    p.add_argument("--max-rows-guard", type=int, default=10000)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--val-frac", type=float, default=0.2, help="Fraction of smoke rows held out for validation.")
     p.add_argument("--epochs", type=int, default=1)
@@ -282,6 +283,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group4_peft")
+    p.add_argument("--subset-token", default="subset_10000_seed42")
+    p.add_argument("--allow-non-subset", action="store_true")
     return p.parse_args()
 
 
@@ -323,6 +326,13 @@ def main() -> int:
         req = cfg["required_inputs"]
         stage1_manifest = Path(req["group1_stage1_manifest"])
         stage1_projector_state_path = Path(req["group1_stage1_projector_state"])
+        if args.max_rows_guard > 0 and args.max_rows > args.max_rows_guard:
+            raise ValueError(f"--max-rows ({args.max_rows}) exceeds guard ({args.max_rows_guard})")
+        if not args.allow_non_subset and args.subset_token not in str(stage1_manifest):
+            raise RuntimeError(
+                f"Refusing non-subset stage1 manifest: {stage1_manifest}. "
+                f"Expected token '{args.subset_token}'. Pass --allow-non-subset to override."
+            )
         if not stage1_manifest.exists():
             raise FileNotFoundError(stage1_manifest)
         if not stage1_projector_state_path.exists():

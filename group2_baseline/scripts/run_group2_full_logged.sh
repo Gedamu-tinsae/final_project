@@ -27,7 +27,7 @@ fi
 
 declare -a workflow_args
 if [[ "$#" -eq 0 ]]; then
-  workflow_args=(--stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite)
+  workflow_args=(--config configs/workflow_paths_subset_10000.json --max-rows-guard 10000 --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite)
 else
   workflow_args=("$@")
 fi

@@ -9,7 +9,7 @@
     "group1_stage1_projector_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/subsets/subset_10000_seed42/projector_stage1.pkl",
     "group1_stage2_projector_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/subsets/subset_10000_seed42/projector_stage2.pkl",
     "group1_stage2_llama_state": "${PROJECT_ROOT}/../group1_baseline/artifacts/subsets/subset_10000_seed42/llama_stage2.pkl",
-    "group2_engine_summary": "${PROJECT_ROOT}/../group2_baseline/data/processed/stage2_instruction/engine_comparison_summary.json"
+    "group2_engine_summary": "${PROJECT_ROOT}/../group2_baseline/data/processed/subsets/subset_10000_seed42/stage2_instruction/engine_comparison_summary.json"
   },
 
   "group4_outputs": {

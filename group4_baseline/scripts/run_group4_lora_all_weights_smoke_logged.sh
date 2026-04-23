@@ -14,6 +14,7 @@ meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
+config_rel="configs/workflow_paths_subset_10000.json"
 
 for p in "$python_bin" "$peft_script"; do
   if [[ ! -e "$p" ]]; then
@@ -35,10 +36,12 @@ PY
 declare -a peft_args
 if [[ "$#" -eq 0 ]]; then
   peft_args=(
+    --config "$config_rel"
     --method lora
     --lora-variant all_weights
     --target-modules all
-    --max-rows 64
+    --max-rows 10000
+    --max-rows-guard 10000
     --batch-size 1
     --epochs 1
     --append-manual-results

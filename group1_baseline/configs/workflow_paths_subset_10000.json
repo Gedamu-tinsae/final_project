@@ -1,0 +1,25 @@
+{
+  "tokenizer_id": "meta-llama/Llama-3.2-1B-Instruct",
+  "llama_local_dir": "${PROJECT_ROOT}/data/models/Llama-3.2-1B-Instruct",
+
+  "coco_json": "${PROJECT_ROOT}/data/raw/annotations/captions_train2017.json",
+  "image_root": "${PROJECT_ROOT}/data/raw/train2017",
+
+  "stage1_alignment_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage1_alignment/alignment.json",
+  "stage1_chat_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage1_alignment/alignment_chat.json",
+  "stage1_tokenized_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage1_alignment/alignment_tokenized.json",
+  "stage1_manifest_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage1_alignment/stage1_manifest.json",
+  "stage1_manifest_smoke_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage1_alignment/stage1_manifest_smoke.json",
+
+  "stage2_input_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_finetuning/stage2_input.json",
+  "stage2_tokenized_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_finetuning/alignment_tokenized_stage2.json",
+  "stage2_manifest_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_finetuning/stage2_manifest.json",
+  "stage2_manifest_smoke_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_finetuning/stage2_manifest_smoke.json",
+
+  "clip_feature_dir": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/clip_embeddings",
+
+  "artifacts_dir": "${PROJECT_ROOT}/artifacts/subsets/subset_10000_seed42",
+  "stage1_projector_state": "${PROJECT_ROOT}/artifacts/subsets/subset_10000_seed42/projector_stage1.pkl",
+  "stage2_projector_state": "${PROJECT_ROOT}/artifacts/subsets/subset_10000_seed42/projector_stage2.pkl",
+  "stage2_llama_state": "${PROJECT_ROOT}/artifacts/subsets/subset_10000_seed42/llama_stage2.pkl"
+}

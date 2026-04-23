@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 python_bin="$repo_root/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_baseline_workflow.py"
+default_config_rel="configs/workflow_paths_subset_10000.json"
 
 if [[ ! -x "$python_bin" ]]; then
   echo "Missing python executable: $python_bin" >&2
@@ -40,4 +41,11 @@ if [[ "${REQUIRE_GPU:-1}" == "1" && "$backend" != "gpu" ]]; then
   exit 2
 fi
 
-exec "$python_bin" "$workflow_script" "$@"
+declare -a workflow_args
+if [[ "$#" -eq 0 ]]; then
+  workflow_args=(--config "$default_config_rel" --max-rows-guard 10000)
+else
+  workflow_args=("$@")
+fi
+
+exec "$python_bin" "$workflow_script" "${workflow_args[@]}"

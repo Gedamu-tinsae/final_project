@@ -44,11 +44,13 @@ def _expand_project_root(cfg: dict[str, Any], project_root: Path) -> dict[str, A
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run Group4 workflow stages from CLI.")
-    p.add_argument("--config", default="configs/workflow_paths.json")
+    p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     p.add_argument("--stages", default="all", help="Comma list among 1,2,3,4 or 'all'.")
     p.add_argument("--overwrite", action="store_true", help="Allow overwriting generated plan/registry/summary files.")
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group4_workflow")
+    p.add_argument("--subset-token", default="subset_10000_seed42")
+    p.add_argument("--allow-non-subset", action="store_true")
     return p.parse_args()
 
 
@@ -218,6 +220,14 @@ def main() -> int:
     config_path = (PROJECT_ROOT / args.config).resolve()
     raw_cfg = json.loads(config_path.read_text(encoding="utf-8"))
     cfg = _expand_project_root(raw_cfg, PROJECT_ROOT)
+    if not args.allow_non_subset:
+        for section in ("required_inputs", "group4_outputs"):
+            for key, path in cfg[section].items():
+                if args.subset_token not in str(path):
+                    raise RuntimeError(
+                        f"Refusing non-subset Group4 path for {section}.{key}: {path}. "
+                        f"Expected token '{args.subset_token}'. Pass --allow-non-subset to override."
+                    )
 
     if args.stages == "all":
         enabled = {str(i) for i in range(1, 5)}

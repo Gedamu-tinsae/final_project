@@ -15,8 +15,9 @@ gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_group4_workflow.py"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
+config_rel="configs/workflow_paths_subset_10000.json"
 
-max_rows="${MAX_ROWS:-64}"
+max_rows="${MAX_ROWS:-10000}"
 batch_size="${BATCH_SIZE:-1}"
 epochs="${EPOCHS:-1}"
 
@@ -46,6 +47,7 @@ PY
   echo "python_bin=$python_bin"
   echo "workflow_script=$workflow_script"
   echo "peft_script=$peft_script"
+  echo "config_rel=$config_rel"
   echo "max_rows=$max_rows"
   echo "batch_size=$batch_size"
   echo "epochs=$epochs"
@@ -69,14 +71,16 @@ run_logged() {
 }
 
 # Stage orchestration (plan + registry)
-run_logged "workflow_stage123" "$workflow_script" --stages 1,2,3 --overwrite
+run_logged "workflow_stage123" "$workflow_script" --config "$config_rel" --stages 1,2,3 --overwrite
 
 # LoRA smoke
 run_logged "peft_lora_smoke" "$peft_script" \
   --method lora \
+  --config "$config_rel" \
   --lora-variant qv \
   --target-modules qv \
   --max-rows "$max_rows" \
+  --max-rows-guard 10000 \
   --batch-size "$batch_size" \
   --epochs "$epochs" \
   --append-manual-results \
@@ -85,17 +89,19 @@ run_logged "peft_lora_smoke" "$peft_script" \
 # Selective FT smoke
 run_logged "peft_selective_smoke" "$peft_script" \
   --method selective_ft \
+  --config "$config_rel" \
   --target-modules qv \
   --selection-strategy magnitude \
   --budget-pct 1.0 \
   --max-rows "$max_rows" \
+  --max-rows-guard 10000 \
   --batch-size "$batch_size" \
   --epochs "$epochs" \
   --append-manual-results \
   --overwrite
 
 # Summary (if manual results file now has rows)
-run_logged "workflow_stage4" "$workflow_script" --stages 4 --overwrite
+run_logged "workflow_stage4" "$workflow_script" --config "$config_rel" --stages 4 --overwrite
 
 echo "exit_code=0" >> "$meta_file"
 echo "log_file=$log_file"

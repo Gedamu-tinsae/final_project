@@ -28,6 +28,7 @@ from src.training.train_pipeline import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Group1 baseline smoke pipeline on TPU host.")
+    parser.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     parser.add_argument("--max-rows", type=int, default=256, help="Rows for each smoke manifest.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite stage outputs if they exist.")
     parser.add_argument(
@@ -53,7 +54,7 @@ def main() -> int:
 
     project_root = PROJECT_ROOT
     load_dotenv_file(project_root / ".env")
-    cfg = load_json_config(project_root / "configs" / "workflow_paths.json", project_root)
+    cfg = load_json_config(project_root / args.config, project_root)
     try:
         import jax
 

@@ -65,6 +65,7 @@ run_logged "peft_lora_qv_10k" "$peft_script" \
   --lora-variant qv \
   --target-modules qv \
   --max-rows 10000 \
+  --max-rows-guard 10000 \
   --batch-size 1 \
   --epochs 1 \
   --append-manual-results \
@@ -77,6 +78,7 @@ run_logged "peft_selective_qv_10k" "$peft_script" \
   --selection-strategy magnitude \
   --budget-pct 1.0 \
   --max-rows 10000 \
+  --max-rows-guard 10000 \
   --batch-size 1 \
   --epochs 1 \
   --append-manual-results \

@@ -42,7 +42,7 @@ from src.vision_features.feature_pipeline import run_stage1_clip_precompute
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run Group1 baseline core workflow with safe guards.")
-    p.add_argument("--config", default="configs/workflow_paths.json")
+    p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     p.add_argument("--overwrite", action="store_true", help="Allow overwriting existing outputs.")
     p.add_argument("--download", action="store_true", help="Enable COCO download in Stage 1.")
     p.add_argument("--extract", action="store_true", help="Enable archive extraction in Stage 1.")
@@ -173,6 +173,7 @@ def main() -> int:
                 overwrite=args.overwrite,
             )
             print("mode:", feat["mode"], "feature_files:", feat["num_feature_files"])
+            _enforce_row_guard("stage3_clip_features", int(feat["num_feature_files"]), args.max_rows_guard)
             m.update({"mode": feat["mode"], "feature_files": feat["num_feature_files"]})
 
         # Stage 4

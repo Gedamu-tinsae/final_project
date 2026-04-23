@@ -30,7 +30,7 @@ def _expand_project_root(cfg: dict[str, Any], project_root: Path) -> dict[str, A
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Check Group4 prerequisites.")
-    p.add_argument("--config", default="configs/workflow_paths.json")
+    p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     return p.parse_args()
 
 

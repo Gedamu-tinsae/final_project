@@ -14,8 +14,10 @@ meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 pred_script="$repo_root/scripts/run_group4_smoke_predictions.py"
+config_rel="configs/workflow_paths_subset_10000.json"
+config_path="$repo_root/$config_rel"
 
-for p in "$python_bin" "$pred_script"; do
+for p in "$python_bin" "$pred_script" "$config_path"; do
   if [[ ! -e "$p" ]]; then
     echo "Missing required path: $p" >&2
     exit 1
@@ -32,17 +34,18 @@ print(":".join(libs))
 PY
 ):${LD_LIBRARY_PATH:-}"
 
-default_metrics_1="$repo_root/artifacts/peft_smoke/lora_lora-qv_target-qv_rows-64_seed-42_metrics.json"
-default_metrics_2="$repo_root/artifacts/peft_smoke/selective_ft_lora-na_target-qv_rows-64_seed-42_metrics.json"
-default_metrics_3="$repo_root/artifacts/peft_smoke/lora_lora-all_weights_target-all_rows-64_seed-42_metrics.json"
+mapfile -t default_metrics < <(ls -1t "$repo_root"/artifacts/peft_smoke/*_rows-10000_*_metrics.json 2>/dev/null | head -n 3)
 
 declare -a pred_args
 if [[ "$#" -eq 0 ]]; then
+  if [[ ${#default_metrics[@]} -lt 1 ]]; then
+    echo "No 10k metrics files found under $repo_root/artifacts/peft_smoke" >&2
+    echo "Run the 10k subset Group4 jobs first, then rerun this script." >&2
+    exit 1
+  fi
   pred_args=(
     --metrics-json
-    "$default_metrics_1"
-    "$default_metrics_2"
-    "$default_metrics_3"
+    "${default_metrics[@]}"
     --max-samples 5
   )
 else
@@ -57,6 +60,7 @@ fi
   echo "project_root=$project_root"
   echo "python_bin=$python_bin"
   echo "pred_script=$pred_script"
+  echo "config_path=$config_path"
   echo "pred_args=${pred_args[*]}"
   echo "log_file=$log_file"
 } > "$meta_file"

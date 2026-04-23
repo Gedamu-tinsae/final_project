@@ -28,12 +28,14 @@ fi
 declare -a workflow_args
 if [[ "$#" -eq 0 ]]; then
   workflow_args=(
+    --config configs/workflow_paths_subset_10000.json
     --train both
     --no-mesh
     --smoke
     --smoke-rows 256
     --batch-size 1
     --epochs 1
+    --max-rows-guard 10000
   )
 else
   workflow_args=("$@")
