@@ -60,6 +60,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-mesh", action="store_true", help="Disable model mesh for training bootstrap.")
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group1_workflow")
+    p.add_argument(
+        "--max-rows-guard",
+        type=int,
+        default=0,
+        help="Fail fast if stage row counts exceed this limit (0 disables guard).",
+    )
     return p.parse_args()
 
 
@@ -79,6 +85,14 @@ def _try_plot_history(out_png: Path, x: list[int], y: list[float], title: str, y
     out_png.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_png, dpi=150)
     plt.close()
+
+
+def _enforce_row_guard(stage_name: str, rows: int, max_rows_guard: int) -> None:
+    if max_rows_guard > 0 and rows > max_rows_guard:
+        raise RuntimeError(
+            f"{stage_name} row-count guard failed: rows={rows} exceeds max_rows_guard={max_rows_guard}. "
+            "Use a subset config and avoid global overwrite on Stage 1."
+        )
 
 
 def main() -> int:
@@ -119,6 +133,8 @@ def main() -> int:
                 extract=args.extract,
             )
             print("mode:", mode, "alignment_rows:", len(alignment), "chat_rows:", len(chat_rows))
+            _enforce_row_guard("stage1_alignment", len(alignment), args.max_rows_guard)
+            _enforce_row_guard("stage1_chat", len(chat_rows), args.max_rows_guard)
             for k, pth in status.items():
                 print(f"  {k}: {'OK' if pth.exists() else 'MISSING'} -> {pth}")
             m.update(
@@ -172,6 +188,8 @@ def main() -> int:
             )
             print("stage1:", man["stage1_mode"], "rows:", man["stage1_rows"])
             print("stage2:", man["stage2_mode"], "rows:", man["stage2_rows"])
+            _enforce_row_guard("stage1_manifest", int(man["stage1_rows"]), args.max_rows_guard)
+            _enforce_row_guard("stage2_manifest", int(man["stage2_rows"]), args.max_rows_guard)
             m.update(
                 {
                     "stage1_mode": man["stage1_mode"],
