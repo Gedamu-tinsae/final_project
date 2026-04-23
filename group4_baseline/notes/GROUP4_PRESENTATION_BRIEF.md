@@ -88,4 +88,3 @@ Source files:
   - selective FT metrics JSON
   - `group4_results_manual.json`
 - Then run Stage 4 summary to generate final ranking markdown/json.
-
