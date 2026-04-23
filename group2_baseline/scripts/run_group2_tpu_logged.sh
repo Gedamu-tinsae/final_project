@@ -17,6 +17,17 @@ subset_script="$repo_root/scripts/create_stage2_subset_profile.py"
 config_rel="configs/workflow_paths_subset_10000.json"
 run_stage4_experiments="${RUN_STAGE4_EXPERIMENTS:-0}"
 run_stage5_experiments="${RUN_STAGE5_EXPERIMENTS:-0}"
+with_experiments=0
+
+if [[ "${1:-}" == "--with-experiments" ]]; then
+  with_experiments=1
+  shift
+fi
+if [[ "$with_experiments" == "1" ]]; then
+  run_stage4_experiments=1
+  run_stage5_experiments=1
+fi
+
 experiment_args=(
   --experiment-epochs "${EXPERIMENT_EPOCHS:-1}"
   --experiment-batch-size "${EXPERIMENT_BATCH_SIZE:-8}"
@@ -50,6 +61,7 @@ fi
   echo "config_rel=$config_rel"
   echo "run_stage4_experiments=$run_stage4_experiments"
   echo "run_stage5_experiments=$run_stage5_experiments"
+  echo "with_experiments=$with_experiments"
   echo "experiment_args=${experiment_args[*]}"
   echo "log_file=$log_file"
 } > "$meta_file"

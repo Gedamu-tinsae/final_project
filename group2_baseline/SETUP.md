@@ -188,10 +188,10 @@ To also execute Stage-4/Stage-5 experiments (populate `all_results_manual.json` 
 RUN_STAGE4_EXPERIMENTS=1 RUN_STAGE5_EXPERIMENTS=1 ./scripts/run_group2_tpu_logged.sh
 ```
 
-Shortcut:
+Single-script shortcut flag:
 
 ```bash
-./scripts/run_group2_experiments_tpu_logged.sh
+./scripts/run_group2_tpu_logged.sh --with-experiments
 ```
 
 ### tmux variant
