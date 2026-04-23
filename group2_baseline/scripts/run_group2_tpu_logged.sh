@@ -13,6 +13,7 @@ meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 entry_script="$repo_root/scripts/run_group2_workflow.py"
+subset_script="$repo_root/scripts/create_stage2_subset_profile.py"
 config_rel="configs/workflow_paths_subset_10000.json"
 
 if [[ ! -x "$python_bin" ]]; then
@@ -23,6 +24,10 @@ if [[ ! -f "$entry_script" ]]; then
   echo "Missing entry script: $entry_script" >&2
   exit 1
 fi
+if [[ ! -f "$subset_script" ]]; then
+  echo "Missing subset script: $subset_script" >&2
+  exit 1
+fi
 
 {
   echo "timestamp=$ts"
@@ -31,11 +36,12 @@ fi
   echo "project_root=$project_root"
   echo "python_bin=$python_bin"
   echo "entry_script=$entry_script"
+  echo "subset_script=$subset_script"
   echo "config_rel=$config_rel"
   echo "log_file=$log_file"
 } > "$meta_file"
 
-run_logged() {
+run_logged_workflow() {
   local label="$1"
   shift
   echo "==== ${label} ====" | tee -a "$log_file"
@@ -52,13 +58,32 @@ run_logged() {
   fi
 }
 
+run_logged_subset() {
+  local label="$1"
+  shift
+  echo "==== ${label} ====" | tee -a "$log_file"
+  set +e
+  /usr/bin/time -v "$python_bin" "$subset_script" "$@" 2>&1 | tee -a "$log_file"
+  local status=${PIPESTATUS[0]}
+  set -e
+  echo "${label}_exit_code=${status}" >> "$meta_file"
+  if [[ $status -ne 0 ]]; then
+    echo "exit_code=$status" >> "$meta_file"
+    echo "log_file=$log_file"
+    echo "meta_file=$meta_file"
+    exit "$status"
+  fi
+}
+
+run_logged_subset "group2_subset10k" --config "$config_rel" --rows 10000 --seed 42 --overwrite
+
 if [[ "$#" -gt 0 ]]; then
   echo "custom_args=$*" >> "$meta_file"
-  run_logged "group2_custom" "$@"
+  run_logged_workflow "group2_custom" "$@"
 else
-  run_logged "group2_stage1236" --config "$config_rel" --max-rows-guard 10000 --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite
-  run_logged "group2_stage4" --config "$config_rel" --max-rows-guard 10000 --stages 4 --overwrite
-  run_logged "group2_stage5" --config "$config_rel" --max-rows-guard 10000 --stages 5 --stage5-prepare-inputs --overwrite
+  run_logged_workflow "group2_stage1236" --config "$config_rel" --max-rows-guard 10000 --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite
+  run_logged_workflow "group2_stage4" --config "$config_rel" --max-rows-guard 10000 --stages 4 --overwrite
+  run_logged_workflow "group2_stage5" --config "$config_rel" --max-rows-guard 10000 --stages 5 --stage5-prepare-inputs --overwrite
 fi
 
 echo "exit_code=0" >> "$meta_file"

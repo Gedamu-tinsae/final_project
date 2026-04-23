@@ -1,5 +1,6 @@
 {
   "project_root": "${PROJECT_ROOT}",
+  "stage2_source_root": "${PROJECT_ROOT}/data/processed/stage2_instruction",
   "stage2_root": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_instruction",
   "image_root": "${PROJECT_ROOT}/../group1_baseline/data/raw/train2017",
   "clip_feature_root": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/stage2_features",

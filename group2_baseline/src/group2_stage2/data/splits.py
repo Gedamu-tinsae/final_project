@@ -23,26 +23,46 @@ def build_shared_quality_pool(
         variant_image_sets[variant] = {r["image_id"] for r in rows}
 
     common_image_ids = sorted(set.intersection(*(variant_image_sets[v] for v in all_variants)))
-    if len(common_image_ids) < quality_image_count:
-        raise ValueError(
-            f"Only {len(common_image_ids)} common images found but quality_image_count={quality_image_count}."
+    if not common_image_ids:
+        raise ValueError("No common images found across all variants.")
+
+    effective_quality_count = min(quality_image_count, len(common_image_ids))
+    if effective_quality_count < quality_image_count:
+        print(
+            "[build_shared_quality_pool] reducing quality_image_count "
+            f"from {quality_image_count} to {effective_quality_count} "
+            f"(common available: {len(common_image_ids)})"
         )
 
     rng = random.Random(split_seed)
     selected_image_ids = list(common_image_ids)
     rng.shuffle(selected_image_ids)
-    selected_image_ids = selected_image_ids[:quality_image_count]
+    selected_image_ids = selected_image_ids[:effective_quality_count]
 
-    if val_image_count >= len(selected_image_ids):
-        raise ValueError("val_image_count must be smaller than quality_image_count")
+    max_val_allowed = max(len(selected_image_ids) - 1, 0)
+    effective_val_count = min(val_image_count, max_val_allowed)
+    if effective_val_count < val_image_count:
+        print(
+            "[build_shared_quality_pool] reducing val_image_count "
+            f"from {val_image_count} to {effective_val_count} "
+            f"(selected quality: {len(selected_image_ids)})"
+        )
+    if effective_val_count <= 0:
+        raise ValueError(
+            "Not enough selected images to create a train/val split. "
+            f"selected={len(selected_image_ids)} val={effective_val_count}"
+        )
 
-    val_image_ids = set(selected_image_ids[:val_image_count])
-    train_image_ids = set(selected_image_ids[val_image_count:])
+    val_image_ids = set(selected_image_ids[:effective_val_count])
+    train_image_ids = set(selected_image_ids[effective_val_count:])
 
     pool_info = {
         "pool_reference_variant": pool_reference_variant,
         "all_variants": all_variants,
-        "quality_image_count": quality_image_count,
+        "quality_image_count_requested": quality_image_count,
+        "quality_image_count": effective_quality_count,
+        "val_image_count_requested": val_image_count,
+        "val_image_count": effective_val_count,
         "common_image_count_before_sampling": len(common_image_ids),
         "selected_image_ids": sorted(selected_image_ids),
     }
@@ -50,7 +70,10 @@ def build_shared_quality_pool(
         "seed": split_seed,
         "pool_reference_variant": pool_reference_variant,
         "all_variants": all_variants,
-        "quality_image_count": quality_image_count,
+        "quality_image_count_requested": quality_image_count,
+        "quality_image_count": effective_quality_count,
+        "val_image_count_requested": val_image_count,
+        "val_image_count": effective_val_count,
         "num_train_images": len(train_image_ids),
         "num_val_images": len(val_image_ids),
         "train_image_ids": sorted(train_image_ids),

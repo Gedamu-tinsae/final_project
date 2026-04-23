@@ -16,7 +16,11 @@ Use that same `.venv` for Group 2.
 
 ## 2) Paths
 
-Update:
+Update (default subset run):
+
+- `code/group2_baseline/configs/workflow_paths_subset_10000.json`
+
+Optional full-data config:
 
 - `code/group2_baseline/configs/workflow_paths.json`
 
@@ -78,6 +82,7 @@ python scripts/run_group2_workflow.py --stages all
 ```
 
 By default, `overwrite=False`, so existing expensive artifacts are reused/skipped.
+Group2 scripts now default to `workflow_paths_subset_10000.json`.
 
 ### Recommended smoke check before Group 4 work
 
@@ -156,6 +161,21 @@ cd ~/final_project/group2_baseline
 source ../group1_baseline/.venv/bin/activate
 ./scripts/run_group2_tpu_logged.sh
 ```
+
+Before workflow stages, the runner now auto-executes:
+
+```bash
+python scripts/create_stage2_subset_profile.py \
+  --config configs/workflow_paths_subset_10000.json \
+  --rows 10000 \
+  --seed 42 \
+  --overwrite
+```
+
+This trims each variant `stage2_dataset.jsonl` to deterministic 10k and writes:
+- `data/processed/subsets/subset_10000_seed42/stage2_instruction/subset_manifest.json`
+
+So downstream Group2 stages always consume 10k subset inputs.
 
 Default TPU sequence runs:
 1. `--stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite`
