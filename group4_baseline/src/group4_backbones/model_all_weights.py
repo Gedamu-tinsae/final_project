@@ -794,4 +794,3 @@ class Llama3(BackendMappingMixin, nnx.Module, pytree=False):
   @property
   def num_embed(self) -> int:
     return self.config.embed_dim
-

@@ -252,3 +252,31 @@ Logs/meta for both scripts:
 - `/root/final_project/logs/runs/*_group1_train_nomesh.meta.txt`
 - `/root/final_project/logs/runs/*_group1_train_smoke_nomesh.log`
 - `/root/final_project/logs/runs/*_group1_train_smoke_nomesh.meta.txt`
+
+## 11) Standard metrics/figure outputs (all stages)
+
+Each run now writes to:
+- `outputs/group1/<run_id>/...`
+- plus stage contract directories: `outputs/group1/stage<k>/<run_id>/...`
+
+Core files:
+- `run_config.json`
+- `stage_meta.json`
+- `timing.json`
+- `resource_usage.csv`
+- `stdout.log`
+- `artifacts_manifest.json`
+
+Plot data and figures:
+- `plots_data/stage_timing.csv`
+- `plots_data/resource_usage.csv`
+- `fig_stage_timing.png`
+- `fig_throughput_steps_per_sec.png`
+- `fig_memory_usage.png`
+- `fig_overview_dashboard.png`
+
+Training stages also write:
+- `stage5/train_history.csv`, `stage5/val_history.csv`
+- `stage6/train_history.csv`, `stage6/val_history.csv`
+- `stage5/fig_loss_train_vs_step.png`, `stage5/fig_loss_val_vs_epoch_or_evalstep.png`
+- `stage6/fig_loss_train_vs_step.png`, `stage6/fig_loss_val_vs_epoch_or_evalstep.png`

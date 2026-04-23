@@ -110,4 +110,3 @@ def create_model_from_safe_tensors(
       dtype=dtype,
       mode="original",
   )
-

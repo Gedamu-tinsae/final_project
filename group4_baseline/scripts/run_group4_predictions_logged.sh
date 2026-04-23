@@ -70,4 +70,3 @@ echo "exit_code=$status" >> "$meta_file"
 echo "log_file=$log_file"
 echo "meta_file=$meta_file"
 exit "$status"
-

@@ -67,7 +67,7 @@ def run_stage1_training_pipeline(
     # static type expects `Params`; cast keeps Pylance quiet without changing behavior.
     opt_state = tx.init(cast(Any, projector_state))
 
-    projector_state, _ = run_stage1_training(
+    projector_state, _, train_history, val_history = run_stage1_training(
         manifest_json=str(manifest_json),
         projector_state=projector_state,
         opt_state=opt_state,
@@ -78,6 +78,7 @@ def run_stage1_training_pipeline(
         num_epochs=num_epochs,
         batch_size=batch_size,
         log_every=log_every,
+        val_frac=0.1,
     )
 
     stage1_projector_state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,6 +90,8 @@ def run_stage1_training_pipeline(
         "projector_state_path": str(stage1_projector_state_path),
         "in_dim": in_dim,
         "out_dim": out_dim,
+        "train_history": train_history,
+        "val_history": val_history,
     }
 
 
@@ -175,7 +178,7 @@ def run_stage2_training_pipeline(
     tx = optax.adamw(learning_rate=learning_rate, weight_decay=0.0)
     opt_state = tx.init(cast(Any, {"projector": projector_state, "llama": llama_state}))
 
-    projector_state, llama_state, _ = run_stage2_training(
+    projector_state, llama_state, _, train_history, val_history = run_stage2_training(
         manifest_json=str(manifest_json),
         projector_state=projector_state,
         llama_state=llama_state,
@@ -186,6 +189,7 @@ def run_stage2_training_pipeline(
         num_epochs=num_epochs,
         batch_size=batch_size,
         log_every=log_every,
+        val_frac=0.1,
     )
 
     stage2_projector_state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -200,4 +204,6 @@ def run_stage2_training_pipeline(
         "stage2_llama_state_path": str(stage2_llama_state_path),
         "in_dim": in_dim,
         "out_dim": out_dim,
+        "train_history": train_history,
+        "val_history": val_history,
     }

@@ -7,7 +7,7 @@ log_root="$project_root/logs/runs"
 mkdir -p "$log_root"
 
 ts="$(date +%Y%m%d_%H%M%S)"
-run_tag="group4_lora_all_weights_smoke"
+run_tag="group4_selective_smoke"
 log_file="$log_root/${ts}_${run_tag}.log"
 meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 
@@ -22,22 +22,13 @@ for p in "$python_bin" "$peft_script"; do
   fi
 done
 
-# Make JAX CUDA libs discoverable at runtime (prevents cuSPARSE fallback-to-CPU).
-export LD_LIBRARY_PATH="$("$python_bin" - <<'PY'
-import site, glob, os
-libs = []
-for r in site.getsitepackages():
-    libs += glob.glob(os.path.join(r, "nvidia", "*", "lib"))
-print(":".join(libs))
-PY
-):${LD_LIBRARY_PATH:-}"
-
 declare -a peft_args
 if [[ "$#" -eq 0 ]]; then
   peft_args=(
-    --method lora
-    --lora-variant all_weights
-    --target-modules all
+    --method selective_ft
+    --target-modules qv
+    --selection-strategy magnitude
+    --budget-pct 1.0
     --max-rows 64
     --batch-size 1
     --epochs 1

@@ -30,6 +30,3 @@ data/processed/
 Thumbs.db
 .vscode/
 .idea/
-
-# Local model weights
-data/models/

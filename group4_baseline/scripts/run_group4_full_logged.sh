@@ -11,7 +11,7 @@ run_tag="group4_full"
 log_file="$log_root/${ts}_${run_tag}.log"
 meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 
-gpuspec="${GPUSPEC:-EUNH100x1}"
+gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_group4_workflow.py"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"

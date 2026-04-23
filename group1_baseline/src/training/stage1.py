@@ -33,6 +33,20 @@ def train_step(projector_state, opt_state, batch, projector_graphdef, llama_stat
     return projector_state, opt_state, loss
 
 
+def eval_step(projector_state, batch, projector_graphdef, llama_state, llama_graphdef):
+    """One stage-1 evaluation step (no gradient update)."""
+    projector = nnx.merge(projector_graphdef, projector_state)
+    llama_model = nnx.merge(llama_graphdef, llama_state)
+    mm = make_multimodal_inputs(llama_model, projector, batch)
+    logits, _ = llama_model.forward_from_embeddings(
+        input_embeds=mm["input_embeds"],
+        positions=mm["positions"],
+        cache=None,
+        attention_mask=mm["attention_mask"],
+    )
+    return masked_cross_entropy_loss(logits, mm["labels"])
+
+
 def run_stage1_training(
     manifest_json,
     projector_state,
@@ -44,14 +58,29 @@ def run_stage1_training(
     num_epochs=1,
     batch_size=2,
     log_every=10,
+    val_frac=0.1,
 ):
     """Run stage-1 training over a manifest of precomputed vision features."""
     with open(manifest_json, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
+    if not manifest:
+        raise ValueError(f"Manifest is empty: {manifest_json}")
+
+    val_count = max(1, int(round(len(manifest) * float(val_frac))))
+    if val_count >= len(manifest):
+        val_count = max(1, len(manifest) - 1)
+    train_rows = manifest[:-val_count]
+    val_rows = manifest[-val_count:]
+    if not train_rows:
+        train_rows = manifest[:1]
+        val_rows = manifest[1:] or manifest[:1]
+
     step = 0
+    train_history: list[dict] = []
+    val_history: list[dict] = []
     for epoch in range(num_epochs):
-        for batch in iterate_minibatches(manifest, batch_size=batch_size):
+        for batch in iterate_minibatches(train_rows, batch_size=batch_size):
             projector_state, opt_state, loss = train_step(
                 projector_state,
                 opt_state,
@@ -63,6 +92,20 @@ def run_stage1_training(
             )
             if step % log_every == 0:
                 print(f"epoch={epoch} step={step} loss={float(loss):.4f}")
+            train_history.append(
+                {
+                    "epoch": int(epoch),
+                    "step": int(step),
+                    "loss": float(loss),
+                }
+            )
             step += 1
 
-    return projector_state, opt_state
+        val_losses = []
+        for batch in iterate_minibatches(val_rows, batch_size=batch_size):
+            val_losses.append(float(eval_step(projector_state, batch, projector_graphdef, llama_state, llama_graphdef)))
+        val_loss = float(sum(val_losses) / max(1, len(val_losses)))
+        print(f"epoch={epoch} val_loss={val_loss:.4f}")
+        val_history.append({"epoch": int(epoch), "val_loss": val_loss})
+
+    return projector_state, opt_state, train_history, val_history

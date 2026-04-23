@@ -100,4 +100,3 @@ run_logged "workflow_stage4" "$workflow_script" --stages 4 --overwrite
 echo "exit_code=0" >> "$meta_file"
 echo "log_file=$log_file"
 echo "meta_file=$meta_file"
-

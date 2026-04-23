@@ -72,6 +72,7 @@ Outputs from each run:
 Key presentation metrics now logged per run:
 - `trainable_params_total`, `trainable_params_millions`
 - `loss_first`, `loss_last`
+- `val_loss`
 - `wall_time_sec`, `steps_per_sec`, `samples_per_sec`
 - `gpu_stats` (avg/max GPU util, avg/max memory used, avg/max power)
 
@@ -87,8 +88,8 @@ Suggested smoke pair:
 - Selective FT: `--method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0`
 
 Important:
-- `run_group4_peft_smoke.py` logs training-side metrics automatically.
-- `val_loss` and `win_rate_vs_baseline` are not auto-produced by the smoke runner; fill them after evaluation.
+- `run_group4_peft_smoke.py` now logs `val_loss` automatically from a held-out split in the smoke subset.
+- `win_rate_vs_baseline` still requires pairwise eval and should be filled after that eval step.
 
 ## 7) After training runs are executed
 
@@ -121,17 +122,62 @@ Outputs:
 - `data/processed/group4_results_summary.json`
 - `data/processed/group4_results_summary.md`
 
+## 9) Cross-run comparison report + figures
+
+After running Group1/Group2/Group4 workflows, generate one presentation-ready comparison pack:
+
+```bash
+cd /root/final_project
+python common/generate_comparison_report.py --outputs-root outputs --run-name presentation
+```
+
+Generated:
+- `outputs/comparison/<run_id>/comparison_table.csv`
+- `outputs/comparison/<run_id>/comparison_table.md`
+- `outputs/comparison/<run_id>/comparison_figures/fig_group_comparison.png`
+- `outputs/comparison/<run_id>/comparison_figures/fig_method_comparison_bar.png`
+- `outputs/comparison/<run_id>/comparison_figures/fig_trainable_params_bar.png`
+- `outputs/comparison/<run_id>/comparison_figures/fig_overview_dashboard.png`
+- `outputs/REPORT_INDEX.md`
+
+## 10) Group4 run output contract
+
+Each Group4 run writes:
+- `outputs/group4/<run_id>/...`
+- stage contract dirs under `outputs/group4/stage<k>/<run_id>/...`
+
+Always present:
+- `run_config.json`, `stage_meta.json`, `timing.json`
+- `resource_usage.csv`, `stdout.log`, `artifacts_manifest.json`
+- `plots_data/stage_timing.csv`, `plots_data/resource_usage.csv`
+- `fig_throughput_steps_per_sec.png`, `fig_memory_usage.png`, `fig_overview_dashboard.png`
+
+PEFT smoke runs additionally write:
+- `peft/train_history.csv`, `peft/val_history.csv`
+- `peft/metrics.json`
+- `peft/fig_loss_train_vs_step.png`
+- `peft/fig_loss_val_vs_epoch_or_evalstep.png`
+
 ## 8) Logging runs with tee
 
 Use the wrapper script (recommended). It handles:
 - log file creation
 - meta file creation
 - stage-by-stage logging for workflow + PEFT runs
+- comparison report generation at end
 - correct exit-code handling
 
 ```bash
 cd /root/final_project/group4_baseline
 ./scripts/run_group4_full_logged.sh
+```
+
+TPU subset convenience script:
+
+```bash
+cd ~/final_project/group4_baseline
+source ../group1_baseline/.venv/bin/activate
+./scripts/run_group4_subset10k_tpu_logged.sh
 ```
 
 Optional GPU override:

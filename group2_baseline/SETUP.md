@@ -149,6 +149,19 @@ Monitor the latest log:
 tail -f /root/final_project/logs/runs/*_group2_full.log
 ```
 
+TPU subset convenience script:
+
+```bash
+cd ~/final_project/group2_baseline
+source ../group1_baseline/.venv/bin/activate
+./scripts/run_group2_tpu_logged.sh
+```
+
+Default TPU sequence runs:
+1. `--stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite`
+2. `--stages 4 --overwrite`
+3. `--stages 5 --stage5-prepare-inputs --overwrite`
+
 ### tmux variant
 
 1. Start tmux:
@@ -177,3 +190,38 @@ tmux attach -t g2_full
 ```bash
 tail -f /root/final_project/logs/runs/*_group2_full.log
 ```
+
+## 7) Standard metrics/figure outputs (all stages)
+
+Each run now writes to:
+- `outputs/group2/<run_id>/...`
+- plus stage contract directories: `outputs/group2/stage<k>/<run_id>/...`
+
+Core files per run/stage:
+- `run_config.json`
+- `stage_meta.json`
+- `timing.json`
+- `resource_usage.csv`
+- `stdout.log`
+- `artifacts_manifest.json`
+
+Plot data and figures:
+- `plots_data/stage_timing.csv`
+- `plots_data/resource_usage.csv`
+- `fig_stage_timing.png`
+- `fig_throughput_steps_per_sec.png`
+- `fig_memory_usage.png`
+- `fig_overview_dashboard.png`
+
+## 8) Cross-run comparison pack (with Group1/Group4)
+
+```bash
+cd /root/final_project
+python common/generate_comparison_report.py --outputs-root outputs --run-name presentation
+```
+
+This creates:
+- `outputs/comparison/<run_id>/comparison_table.csv`
+- `outputs/comparison/<run_id>/comparison_table.md`
+- `outputs/comparison/<run_id>/comparison_figures/*.png`
+- `outputs/REPORT_INDEX.md`

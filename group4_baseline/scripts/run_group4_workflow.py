@@ -18,8 +18,13 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from common.run_metrics import RunTracker
 
 
 def _expand_project_root(cfg: dict[str, Any], project_root: Path) -> dict[str, Any]:
@@ -42,6 +47,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--config", default="configs/workflow_paths.json")
     p.add_argument("--stages", default="all", help="Comma list among 1,2,3,4 or 'all'.")
     p.add_argument("--overwrite", action="store_true", help="Allow overwriting generated plan/registry/summary files.")
+    p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
+    p.add_argument("--run-name", default="group4_workflow")
     return p.parse_args()
 
 
@@ -220,40 +227,59 @@ def main() -> int:
     print("PROJECT_ROOT:", PROJECT_ROOT)
     print("CONFIG:", config_path)
     print("overwrite:", args.overwrite)
+    tracker = RunTracker(
+        group="group4",
+        output_root=Path(args.output_root),
+        run_name=args.run_name,
+        config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(config_path)},
+    )
+    print("RUN_DIR:", tracker.run_dir)
 
     if "1" in enabled:
-        print("\n[Stage 1] Preflight dependencies")
-        out = _stage1_preflight(cfg)
-        for k, v in out["status"].items():
-            print(f"{v}: {k}")
-        if out["missing"]:
-            print("blocked_missing:", out["missing"])
+        with tracker.stage("stage1_preflight") as m:
+            print("\n[Stage 1] Preflight dependencies")
+            out = _stage1_preflight(cfg)
+            for k, v in out["status"].items():
+                print(f"{v}: {k}")
+            if out["missing"]:
+                print("blocked_missing:", out["missing"])
+            m.update({"missing": len(out["missing"]), "required": len(out["status"])})
 
     if "2" in enabled:
-        print("\n[Stage 2] Build experiment plan")
-        out = _stage2_build_plan(cfg, overwrite=args.overwrite)
-        print("plan:", out["write"]["mode"], "->", out["write"]["path"])
-        print("num_experiments:", out["num_experiments"])
+        with tracker.stage("stage2_plan") as m:
+            print("\n[Stage 2] Build experiment plan")
+            out = _stage2_build_plan(cfg, overwrite=args.overwrite)
+            print("plan:", out["write"]["mode"], "->", out["write"]["path"])
+            print("num_experiments:", out["num_experiments"])
+            m.update({"mode": out["write"]["mode"], "num_experiments": out["num_experiments"]})
 
     if "3" in enabled:
-        print("\n[Stage 3] Build run registry")
-        out = _stage3_build_registry(cfg, overwrite=args.overwrite)
-        if "blocked" in out:
-            print("blocked:", out["blocked"])
-        else:
-            print("registry:", out["write"]["mode"], "->", out["write"]["path"])
-            print("num_entries:", out["num_entries"])
+        with tracker.stage("stage3_registry") as m:
+            print("\n[Stage 3] Build run registry")
+            out = _stage3_build_registry(cfg, overwrite=args.overwrite)
+            if "blocked" in out:
+                print("blocked:", out["blocked"])
+                m.update({"blocked": out["blocked"]})
+            else:
+                print("registry:", out["write"]["mode"], "->", out["write"]["path"])
+                print("num_entries:", out["num_entries"])
+                m.update({"mode": out["write"]["mode"], "num_entries": out["num_entries"]})
 
     if "4" in enabled:
-        print("\n[Stage 4] Summarize results")
-        out = _stage4_summarize(cfg, overwrite=args.overwrite)
-        if "blocked" in out:
-            print("blocked:", out["blocked"])
-        else:
-            print("summary_json:", out["summary_json"]["mode"], "->", out["summary_json"]["path"])
-            print("summary_md:", out["summary_md"]["mode"], "->", out["summary_md"]["path"])
-            print("best_experiment:", out["best_experiment"])
+        with tracker.stage("stage4_summarize") as m:
+            print("\n[Stage 4] Summarize results")
+            out = _stage4_summarize(cfg, overwrite=args.overwrite)
+            if "blocked" in out:
+                print("blocked:", out["blocked"])
+                m.update({"blocked": out["blocked"]})
+            else:
+                print("summary_json:", out["summary_json"]["mode"], "->", out["summary_json"]["path"])
+                print("summary_md:", out["summary_md"]["mode"], "->", out["summary_md"]["path"])
+                print("best_experiment:", out["best_experiment"])
+                m.update({"best_experiment": out["best_experiment"], "summary_mode": out["summary_json"]["mode"]})
 
+    summary = tracker.finalize()
+    print("Run summary:", summary["run_dir"])
     return 0
 
 
