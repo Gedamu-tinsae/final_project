@@ -194,6 +194,11 @@ Single-script shortcut flag:
 ./scripts/run_group2_tpu_logged.sh --with-experiments
 ```
 
+Notes:
+- `--with-experiments` now auto-prepares missing train/val manifests before Stage 4 experiments.
+- Stage 5 now auto-prepares quantity inputs when Stage 5 experiments are enabled.
+- Default experiment batch size in the TPU wrapper is conservative (`1`) to reduce OOM risk.
+
 ### tmux variant
 
 1. Start tmux:

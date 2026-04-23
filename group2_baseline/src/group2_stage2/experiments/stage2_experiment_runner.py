@@ -47,12 +47,12 @@ def _resolve_group1_defaults(project_root: Path, cfg: dict[str, Any]) -> dict[st
     llama_local_dir = Path(
         cfg.get("llama_local_dir", str(group1_root / "data/models/Llama-3.2-1B-Instruct"))
     ).resolve()
-    stage1_projector_state_path = Path(
-        cfg.get(
-            "stage1_projector_state",
-            str(group1_root / f"artifacts/subsets/{profile}/projector_stage1.pkl"),
-        )
-    ).resolve()
+    if "stage1_projector_state" in cfg:
+        stage1_projector_state_path = Path(str(cfg["stage1_projector_state"])).resolve()
+    else:
+        subset_default = (group1_root / f"artifacts/subsets/{profile}/projector_stage1.pkl").resolve()
+        legacy_default = (group1_root / "artifacts/projector_stage1.pkl").resolve()
+        stage1_projector_state_path = subset_default if subset_default.exists() else legacy_default
     return {
         "group1_root": group1_root,
         "llama_local_dir": llama_local_dir,

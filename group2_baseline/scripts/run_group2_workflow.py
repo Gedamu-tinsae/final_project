@@ -155,6 +155,38 @@ def main() -> int:
             print("runtime ready")
         return runtime
 
+    def ensure_variant_manifests(variants: list[str], splits: tuple[str, ...]) -> None:
+        missing: list[tuple[str, str]] = []
+        for variant in variants:
+            for split in splits:
+                if split == "train":
+                    manifest = stage2_root / variant / "stage2_manifest_train.json"
+                elif split == "val":
+                    manifest = stage2_root / variant / "stage2_manifest_val.json"
+                elif split == "full":
+                    manifest = stage2_root / variant / "stage2_manifest_full.json"
+                else:
+                    raise ValueError(f"Unsupported split for manifest check: {split}")
+                if not manifest.exists():
+                    missing.append((variant, split))
+        if not missing:
+            return
+        print("auto-preparing missing manifests:", missing)
+        rt = ensure_runtime()
+        prep = prepare_stage2_variant_splits(
+            stage2_root=stage2_root,
+            image_root=image_root,
+            feature_root=feature_root,
+            tokenizer=rt["tokenizer"],
+            clip_bundle=rt["clip_bundle"],
+            get_features_compiled=rt["get_features_compiled"],
+            all_variants=variants,
+            splits=splits,
+            overwrite=args.overwrite,
+            additional_feature_roots=reuse_feature_roots,
+        )
+        print("auto-prep jobs:", len(prep))
+
     def _runner(variant_name: str) -> dict[str, Any]:
         return run_stage2_experiment(
             project_root=PROJECT_ROOT,
@@ -248,6 +280,8 @@ def main() -> int:
                 else:
                     to_run = [selection["selected_variant"]] if selection["selected_variant"] is not None else []
                 print("stage4 experiment variants:", to_run if to_run else "<none>")
+                if to_run:
+                    ensure_variant_manifests(to_run, ("train", "val"))
 
                 all_results = selection["all_results"]
                 for variant in to_run:
@@ -304,7 +338,8 @@ def main() -> int:
                 print("registered:", len(reg))
                 m.update({"quantity_variants": len(qvars), "registered": len(reg)})
 
-                if args.stage5_prepare_inputs:
+                prepare_inputs = args.stage5_prepare_inputs or args.stage5_run_experiments
+                if prepare_inputs:
                     rt = ensure_runtime()
 
                     def tok_cb(variant: str, split: str, overwrite: bool = False) -> dict:
