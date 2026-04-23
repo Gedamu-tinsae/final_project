@@ -103,10 +103,20 @@ def run_stage2_training(
                 history["train_cumulative_averages"].append(
                     {"epoch": epoch + 1, "global_step": global_step, "mean_loss": cumulative_mean}
                 )
+                print(
+                    f"[stage2-train] epoch={epoch + 1} step={global_step} "
+                    f"loss={loss_value:.4f} cumulative_mean={cumulative_mean:.4f}",
+                    flush=True,
+                )
 
         epoch_train_avg = sum(epoch_losses) / len(epoch_losses) if epoch_losses else None
         history["epoch_train_averages"].append(
             {"epoch": epoch + 1, "mean_loss": epoch_train_avg, "num_steps": len(epoch_losses)}
+        )
+        print(
+            f"[stage2-train] epoch={epoch + 1} complete "
+            f"mean_loss={epoch_train_avg:.4f} steps={len(epoch_losses)}",
+            flush=True,
         )
 
         if val_manifest_json is not None and eval_step_fn is not None:
@@ -114,6 +124,12 @@ def run_stage2_training(
             history["val_epoch_averages"].append(
                 {"epoch": epoch + 1, "mean_loss": val_result["mean_loss"], "num_batches": val_result["num_batches"]}
             )
+            if val_result["mean_loss"] is not None:
+                print(
+                    f"[stage2-val] epoch={epoch + 1} mean_loss={float(val_result['mean_loss']):.4f} "
+                    f"batches={int(val_result['num_batches'])}",
+                    flush=True,
+                )
 
     final_train_avg = sum(history["train_step_losses"]) / len(history["train_step_losses"]) if history["train_step_losses"] else None
     final_val_result = None
@@ -151,4 +167,3 @@ def load_stage2_snapshot(reset_root: Path) -> dict:
         "llama_state": pickle.loads(llama_path.read_bytes()),
         "opt_state": pickle.loads(opt_path.read_bytes()),
     }
-

@@ -113,7 +113,7 @@ run_logged_workflow() {
   shift
   echo "==== ${label} ====" | tee -a "$log_file"
   set +e
-  /usr/bin/time -v "$python_bin" "$entry_script" "$@" 2>&1 | tee -a "$log_file"
+  PYTHONUNBUFFERED=1 /usr/bin/time -v "$python_bin" -u "$entry_script" "$@" 2>&1 | tee -a "$log_file"
   local status=${PIPESTATUS[0]}
   set -e
   echo "${label}_exit_code=${status}" >> "$meta_file"
@@ -130,7 +130,7 @@ run_logged_subset() {
   shift
   echo "==== ${label} ====" | tee -a "$log_file"
   set +e
-  /usr/bin/time -v "$python_bin" "$subset_script" "$@" 2>&1 | tee -a "$log_file"
+  PYTHONUNBUFFERED=1 /usr/bin/time -v "$python_bin" -u "$subset_script" "$@" 2>&1 | tee -a "$log_file"
   local status=${PIPESTATUS[0]}
   set -e
   echo "${label}_exit_code=${status}" >> "$meta_file"
