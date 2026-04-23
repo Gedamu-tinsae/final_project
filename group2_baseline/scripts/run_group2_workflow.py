@@ -39,6 +39,7 @@ from src.group2_stage2.eval.reporting import build_engine_plots_and_table
 from src.group2_stage2.experiments.experiment_tracking import (
     build_baseline_relative_comparison,
     build_engine_comparison_summary,
+    run_and_store_variant,
     prompt_alignment_audit,
     select_next_variant,
 )
@@ -47,8 +48,10 @@ from src.group2_stage2.experiments.quantity_ablation import (
     derive_quantity_plan,
     prepare_quantity_variants,
     register_quantity_variants,
+    run_quantity_experiments,
     summarize_quantity_results,
 )
+from src.group2_stage2.experiments.stage2_experiment_runner import run_stage2_experiment
 
 
 def _expand_project_root(cfg: dict[str, Any], project_root: Path) -> dict[str, Any]:
@@ -85,6 +88,19 @@ def parse_args() -> argparse.Namespace:
         help="Comma list for Stage 2 prep splits (train,val,full). Default: val",
     )
     p.add_argument("--stage5-prepare-inputs", action="store_true", help="Prepare quantity variant token/feature/manifest inputs.")
+    p.add_argument("--stage4-run-experiments", action="store_true", help="Run and store stage-4 variant experiments.")
+    p.add_argument("--stage4-run-all-missing", action="store_true", help="Run all missing variants in stage-4 results store.")
+    p.add_argument("--stage4-allow-overwrite-results", action="store_true", help="Allow overwriting existing stage-4 variant result entries.")
+    p.add_argument("--stage5-run-experiments", action="store_true", help="Run quantity-variant experiments in stage-5.")
+    p.add_argument("--stage5-allow-overwrite-results", action="store_true", help="Allow overwriting existing stage-5 quantity result entries.")
+    p.add_argument("--experiment-epochs", type=int, default=1)
+    p.add_argument("--experiment-batch-size", type=int, default=8)
+    p.add_argument("--experiment-log-every-steps", type=int, default=20)
+    p.add_argument("--experiment-learning-rate", type=float, default=2e-5)
+    p.add_argument("--experiment-weight-decay", type=float, default=0.0)
+    p.add_argument("--experiment-dtype", choices=["bfloat16", "float32"], default="bfloat16")
+    p.add_argument("--experiment-use-mesh", action="store_true")
+    p.add_argument("--experiment-seed", type=int, default=0)
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group2_workflow")
     p.add_argument("--max-rows-guard", type=int, default=10000)
@@ -138,6 +154,22 @@ def main() -> int:
             runtime = create_stage2_runtime_objects(cfg)
             print("runtime ready")
         return runtime
+
+    def _runner(variant_name: str) -> dict[str, Any]:
+        return run_stage2_experiment(
+            project_root=PROJECT_ROOT,
+            stage2_root=stage2_root,
+            variant=variant_name,
+            cfg=cfg,
+            num_epochs=args.experiment_epochs,
+            batch_size=args.experiment_batch_size,
+            log_every_steps=args.experiment_log_every_steps,
+            learning_rate=args.experiment_learning_rate,
+            weight_decay=args.experiment_weight_decay,
+            dtype=args.experiment_dtype,
+            use_mesh=args.experiment_use_mesh,
+            seed=args.experiment_seed,
+        )
 
     # Stage 1
     if "1" in enabled:
@@ -202,12 +234,39 @@ def main() -> int:
                 results_path=results_path,
                 expected_variants=all_variants,
                 current_variant=None,
-                allow_overwrite=args.overwrite,
+                allow_overwrite=args.stage4_allow_overwrite_results,
             )
             print("missing_variants:", selection["missing_variants"])
             pa = prompt_alignment_audit(stage2_root, all_variants, prompt_reference_variant=baseline_variant, overwrite=args.overwrite)
             print("prompt audit:", pa.get("mode", "generated"))
             m.update({"missing_variants": len(selection["missing_variants"]), "prompt_audit_mode": pa.get("mode", "generated")})
+
+            if args.stage4_run_experiments:
+                to_run: list[str]
+                if args.stage4_run_all_missing:
+                    to_run = list(selection["missing_variants"])
+                else:
+                    to_run = [selection["selected_variant"]] if selection["selected_variant"] is not None else []
+                print("stage4 experiment variants:", to_run if to_run else "<none>")
+
+                all_results = selection["all_results"]
+                for variant in to_run:
+                    run_out = run_and_store_variant(
+                        results_path=results_path,
+                        all_results=all_results,
+                        selected_variant=variant,
+                        run_stage2_experiment_fn=_runner,
+                    )
+                    all_results = run_out["all_results"]
+                    print("stored variant result:", run_out["ran_variant"])
+                # refresh selection after potential new writes
+                selection = select_next_variant(
+                    results_path=results_path,
+                    expected_variants=all_variants,
+                    current_variant=None,
+                    allow_overwrite=args.stage4_allow_overwrite_results,
+                )
+                print("missing_variants_after_run:", selection["missing_variants"])
 
             if not results_path.exists():
                 print("summary blocked: missing", results_path)
@@ -284,6 +343,16 @@ def main() -> int:
                     )
                     print("quantity prep entries:", len(prep))
                     m.update({"quantity_prep_entries": len(prep)})
+
+                if args.stage5_run_experiments:
+                    qresults = run_quantity_experiments(
+                        stage2_root=stage2_root,
+                        quantity_variants=qvars,
+                        run_stage2_experiment_fn=_runner,
+                        allow_overwrite=args.stage5_allow_overwrite_results,
+                    )
+                    print("quantity experiment results:", len(qresults))
+                    m.update({"quantity_results_entries": len(qresults)})
 
                 qres = stage2_root / "quantity_results.json"
                 if qres.exists():

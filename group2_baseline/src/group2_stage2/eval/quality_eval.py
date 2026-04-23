@@ -139,7 +139,36 @@ def build_pairwise_judge_requests(
     candidate_variants = [v for v in all_variants if v != baseline_variant]
     rng = random.Random(seed)
 
+    def build_judge_prompt(instruction: str, task_type: str, assistant_a_text: str, assistant_b_text: str) -> str:
+        return (
+            "You are an impartial evaluator for a vision-language instruction-following project.\n\n"
+            "Your job is to compare two candidate responses to the SAME instruction.\n\n"
+            "Evaluation criteria:\n"
+            "1. Accuracy\n"
+            "2. Relevance to the instruction\n"
+            "3. Helpfulness\n"
+            "4. Completeness / level of detail\n"
+            "5. Reasoning quality (if the task requires reasoning)\n\n"
+            f"Task type: {task_type}\n\n"
+            "Instruction:\n"
+            f"{instruction}\n\n"
+            "Assistant A:\n"
+            f"{assistant_a_text}\n\n"
+            "Assistant B:\n"
+            f"{assistant_b_text}\n\n"
+            "Choose exactly one winner:\n"
+            "- assistant_a\n"
+            "- assistant_b\n"
+            "- tie\n\n"
+            "Return JSON only in this format:\n"
+            "{\n"
+            '  "winner": "assistant_a" or "assistant_b" or "tie",\n'
+            '  "reason": "one short sentence"\n'
+            "}"
+        )
+
     requests = []
+    results_template = []
     for i, sample in enumerate(eval_pack["samples"], start=1):
         instruction = sample["instruction"]
         task_type = sample["task_type"]
@@ -161,9 +190,102 @@ def build_pairwise_judge_requests(
                     "assistant_a_text": pair[0][1],
                     "assistant_b_variant": pair[1][0],
                     "assistant_b_text": pair[1][1],
+                    "judge_prompt": build_judge_prompt(
+                        instruction=instruction,
+                        task_type=task_type,
+                        assistant_a_text=pair[0][1],
+                        assistant_b_text=pair[1][1],
+                    ),
                 }
             )
+            results_template.append({"request_id": request_id, "winner": None, "reason": ""})
 
-    out = {"mode": "generated", "baseline_variant": baseline_variant, "requests": requests}
+    pairwise_md = stage2_root / "pairwise_judge_requests.md"
+    pairwise_template = stage2_root / "pairwise_judge_results_template.json"
+    pairwise_filled = stage2_root / "pairwise_judge_results_filled.json"
+    pairwise_summary = stage2_root / "pairwise_judge_summary.json"
+
+    with pairwise_md.open("w", encoding="utf-8") as f:
+        f.write("# Pairwise Judge Requests\n\n")
+        f.write(f"Baseline variant: {baseline_variant}\n\n")
+        f.write(f"Candidate variants: {', '.join(candidate_variants)}\n\n")
+        f.write(f"Total pairwise requests: {len(requests)}\n\n")
+        for req in requests:
+            f.write(f"## {req['request_id']}\n\n")
+            f.write(f"- **image_id:** {req['image_id']}\n")
+            f.write(f"- **task_type:** {req['task_type']}\n")
+            f.write(f"- **baseline_variant:** {req['baseline_variant']}\n")
+            f.write(f"- **candidate_variant:** {req['candidate_variant']}\n")
+            f.write(f"- **assistant_a_variant:** {req['assistant_a_variant']}\n")
+            f.write(f"- **assistant_b_variant:** {req['assistant_b_variant']}\n\n")
+            f.write("**Instruction**\n\n")
+            f.write(req["instruction"] + "\n\n")
+            f.write("### Assistant A\n\n")
+            f.write(req["assistant_a_text"] + "\n\n")
+            f.write("### Assistant B\n\n")
+            f.write(req["assistant_b_text"] + "\n\n")
+            f.write("### Judge Prompt\n\n")
+            f.write("```text\n")
+            f.write(req["judge_prompt"])
+            f.write("\n```\n\n")
+
+    write_json(pairwise_template, results_template, overwrite=True)
+
+    optional_summary = None
+    if pairwise_filled.exists():
+        filled_results = json.loads(pairwise_filled.read_text(encoding="utf-8"))
+        results_by_id = {row["request_id"]: row for row in filled_results}
+        candidate_summaries = []
+        for candidate in candidate_variants:
+            wins = losses = ties = missing = 0
+            candidate_requests = [req for req in requests if req["candidate_variant"] == candidate]
+            for req in candidate_requests:
+                result = results_by_id.get(req["request_id"])
+                if result is None:
+                    missing += 1
+                    continue
+                winner = result.get("winner")
+                if winner == "tie":
+                    ties += 1
+                    continue
+                if winner == "assistant_a":
+                    winner_variant = req["assistant_a_variant"]
+                elif winner == "assistant_b":
+                    winner_variant = req["assistant_b_variant"]
+                else:
+                    missing += 1
+                    continue
+                if winner_variant == candidate:
+                    wins += 1
+                elif winner_variant == baseline_variant:
+                    losses += 1
+                else:
+                    missing += 1
+            decided = wins + losses
+            win_rate = wins / decided if decided > 0 else None
+            candidate_summaries.append(
+                {
+                    "candidate_variant": candidate,
+                    "wins": wins,
+                    "losses": losses,
+                    "ties": ties,
+                    "missing_or_invalid": missing,
+                    "decided": decided,
+                    "win_rate_over_decided": win_rate,
+                }
+            )
+        optional_summary = {"baseline_variant": baseline_variant, "candidate_summaries": candidate_summaries}
+        write_json(pairwise_summary, optional_summary, overwrite=True)
+
+    out = {
+        "mode": "generated",
+        "baseline_variant": baseline_variant,
+        "requests": requests,
+        "pairwise_requests_md": str(pairwise_md),
+        "pairwise_results_template_json": str(pairwise_template),
+        "pairwise_results_filled_json": str(pairwise_filled),
+        "pairwise_summary_json": str(pairwise_summary),
+        "pairwise_summary_generated": optional_summary is not None,
+    }
     write_json(out_path, out, overwrite=overwrite)
     return out

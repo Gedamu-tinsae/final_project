@@ -182,6 +182,18 @@ Default TPU sequence runs:
 2. `--stages 4 --overwrite`
 3. `--stages 5 --stage5-prepare-inputs --overwrite`
 
+To also execute Stage-4/Stage-5 experiments (populate `all_results_manual.json` and quantity results), enable:
+
+```bash
+RUN_STAGE4_EXPERIMENTS=1 RUN_STAGE5_EXPERIMENTS=1 ./scripts/run_group2_tpu_logged.sh
+```
+
+Shortcut:
+
+```bash
+./scripts/run_group2_experiments_tpu_logged.sh
+```
+
 ### tmux variant
 
 1. Start tmux:

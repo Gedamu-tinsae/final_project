@@ -15,6 +15,16 @@ python_bin="$project_root/group1_baseline/.venv/bin/python"
 entry_script="$repo_root/scripts/run_group2_workflow.py"
 subset_script="$repo_root/scripts/create_stage2_subset_profile.py"
 config_rel="configs/workflow_paths_subset_10000.json"
+run_stage4_experiments="${RUN_STAGE4_EXPERIMENTS:-0}"
+run_stage5_experiments="${RUN_STAGE5_EXPERIMENTS:-0}"
+experiment_args=(
+  --experiment-epochs "${EXPERIMENT_EPOCHS:-1}"
+  --experiment-batch-size "${EXPERIMENT_BATCH_SIZE:-8}"
+  --experiment-log-every-steps "${EXPERIMENT_LOG_EVERY_STEPS:-20}"
+  --experiment-learning-rate "${EXPERIMENT_LEARNING_RATE:-2e-5}"
+  --experiment-weight-decay "${EXPERIMENT_WEIGHT_DECAY:-0.0}"
+  --experiment-dtype "${EXPERIMENT_DTYPE:-bfloat16}"
+)
 
 if [[ ! -x "$python_bin" ]]; then
   echo "Missing python executable: $python_bin" >&2
@@ -38,6 +48,9 @@ fi
   echo "entry_script=$entry_script"
   echo "subset_script=$subset_script"
   echo "config_rel=$config_rel"
+  echo "run_stage4_experiments=$run_stage4_experiments"
+  echo "run_stage5_experiments=$run_stage5_experiments"
+  echo "experiment_args=${experiment_args[*]}"
   echo "log_file=$log_file"
 } > "$meta_file"
 
@@ -82,8 +95,18 @@ if [[ "$#" -gt 0 ]]; then
   run_logged_workflow "group2_custom" "$@"
 else
   run_logged_workflow "group2_stage1236" --config "$config_rel" --max-rows-guard 10000 --stages 1,2,3,6 --stage2-variants baseline --stage2-splits val --overwrite
-  run_logged_workflow "group2_stage4" --config "$config_rel" --max-rows-guard 10000 --stages 4 --overwrite
-  run_logged_workflow "group2_stage5" --config "$config_rel" --max-rows-guard 10000 --stages 5 --stage5-prepare-inputs --overwrite
+  stage4_args=(--config "$config_rel" --max-rows-guard 10000 --stages 4 --overwrite)
+  stage5_args=(--config "$config_rel" --max-rows-guard 10000 --stages 5 --stage5-prepare-inputs --overwrite)
+
+  if [[ "$run_stage4_experiments" == "1" ]]; then
+    stage4_args+=(--stage4-run-experiments --stage4-run-all-missing "${experiment_args[@]}")
+  fi
+  if [[ "$run_stage5_experiments" == "1" ]]; then
+    stage5_args+=(--stage5-run-experiments "${experiment_args[@]}")
+  fi
+
+  run_logged_workflow "group2_stage4" "${stage4_args[@]}"
+  run_logged_workflow "group2_stage5" "${stage5_args[@]}"
 fi
 
 echo "exit_code=0" >> "$meta_file"
