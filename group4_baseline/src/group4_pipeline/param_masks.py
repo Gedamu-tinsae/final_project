@@ -29,8 +29,6 @@ def module_match(path_str: str, target_modules: str) -> bool:
         return True
     if target_modules == "qv":
         return ("q_proj" in s) or ("v_proj" in s)
-    if target_modules == "qv_mlp":
-        return ("q_proj" in s) or ("v_proj" in s) or ("mlp" in s)
     raise ValueError(f"Unknown target_modules: {target_modules}")
 
 

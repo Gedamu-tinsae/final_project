@@ -63,7 +63,12 @@ def parse_args() -> argparse.Namespace:
         default="qv",
         help="Which partner LoRA model variant to use when --method lora.",
     )
-    p.add_argument("--target-modules", choices=["qv", "qv_mlp", "all"], default="qv")
+    p.add_argument(
+        "--target-modules",
+        choices=["qv", "all"],
+        default="qv",
+        help="Target scope for trainable parameters.",
+    )
     p.add_argument("--selection-strategy", choices=["magnitude", "random"], default="magnitude")
     p.add_argument("--budget-pct", type=float, default=1.0, help="Selective FT budget percentage of candidate leaves.")
     p.add_argument("--max-rows", type=int, default=64)

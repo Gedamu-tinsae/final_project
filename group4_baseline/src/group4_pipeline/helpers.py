@@ -97,3 +97,66 @@ def resolve_group4_config(project_root: Path, config_arg: str) -> tuple[dict[str
             return expand_project_root(raw, project_root), p
     # Final fallback: built-in defaults.
     return default_group4_config(project_root), None
+
+
+def normalize_experiment_space(exp: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Normalize/validate experiment space for robust Group4 staging.
+
+    Returns normalized config plus warning messages for migrated legacy fields.
+    """
+    warnings: list[str] = []
+
+    methods_raw = [str(x) for x in exp.get("methods", ["lora", "selective_ft"])]
+    methods: list[str] = []
+    for m in methods_raw:
+        mm = m.strip().lower()
+        if mm not in {"lora", "selective_ft"}:
+            raise ValueError(f"Unsupported method in experiment_space.methods: {m}")
+        if mm not in methods:
+            methods.append(mm)
+
+    targets_raw = [str(x) for x in exp.get("target_modules", ["qv", "all"])]
+    targets: list[str] = []
+    for t in targets_raw:
+        tt = t.strip().lower()
+        if tt == "qv_mlp":
+            tt = "all"
+            warnings.append("Mapped legacy target_modules value 'qv_mlp' to 'all'.")
+        if tt not in {"qv", "all"}:
+            raise ValueError(f"Unsupported target module in experiment_space.target_modules: {t}")
+        if tt not in targets:
+            targets.append(tt)
+
+    ranks_raw = exp.get("lora_ranks", [4, 8, 16])
+    lora_ranks: list[int] = []
+    for r in ranks_raw:
+        rr = int(r)
+        if rr <= 0:
+            raise ValueError(f"Invalid LoRA rank: {rr}")
+        if rr not in lora_ranks:
+            lora_ranks.append(rr)
+
+    budgets_raw = exp.get("selective_ft_budget_pct", [0.1, 0.5, 1.0])
+    selective_budgets: list[float] = []
+    for b in budgets_raw:
+        bb = float(b)
+        if bb <= 0.0:
+            raise ValueError(f"Invalid selective_ft budget pct: {bb}")
+        if bb not in selective_budgets:
+            selective_budgets.append(bb)
+
+    train_budget_steps = int(exp.get("train_budget_steps", 500))
+    if train_budget_steps <= 0:
+        raise ValueError(f"Invalid train_budget_steps: {train_budget_steps}")
+
+    seed = int(exp.get("seed", 42))
+
+    normalized = {
+        "methods": methods,
+        "lora_ranks": lora_ranks,
+        "target_modules": targets,
+        "selective_ft_budget_pct": selective_budgets,
+        "train_budget_steps": train_budget_steps,
+        "seed": seed,
+    }
+    return normalized, warnings

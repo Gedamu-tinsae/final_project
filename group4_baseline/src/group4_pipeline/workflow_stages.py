@@ -19,6 +19,15 @@ def write_json_guarded(path: Path, payload: dict[str, Any], overwrite: bool) -> 
     return {"mode": "generated", "path": str(path)}
 
 
+def _canonical_target(target: str) -> str:
+    t = str(target).strip().lower()
+    if t == "qv_mlp":
+        return "all"
+    if t not in {"qv", "all"}:
+        raise ValueError(f"Unsupported target_modules value: {target}")
+    return t
+
+
 def _try_plot_metric_bars(
     out_png: Path,
     rows: list[dict[str, Any]],
@@ -78,7 +87,13 @@ def stage2_build_plan(cfg: dict[str, Any], overwrite: bool) -> dict[str, Any]:
     exp = cfg["experiment_space"]
     methods = list(exp["methods"])
     lora_ranks = list(exp["lora_ranks"])
-    targets = list(exp["target_modules"])
+    # Deduplicate while preserving order.
+    raw_targets = [str(t) for t in exp["target_modules"]]
+    targets: list[str] = []
+    for tt in raw_targets:
+        ct = _canonical_target(tt)
+        if ct not in targets:
+            targets.append(ct)
     selective_budgets = list(exp["selective_ft_budget_pct"])
     seed = int(exp["seed"])
     train_steps = int(exp["train_budget_steps"])
@@ -207,13 +222,13 @@ def _build_experiment_cli_args(exp: dict[str, Any], args, project_root: Path) ->
         cmd.append("--overwrite")
 
     if method == "lora":
-        target = str(exp.get("target_modules", "qv"))
+        target = _canonical_target(str(exp.get("target_modules", "qv")))
         lora_variant = "qv"
-        if target in {"all", "qv_mlp"}:
+        if target == "all":
             lora_variant = "all_weights"
         cmd.extend(["--lora-variant", lora_variant, "--target-modules", target])
     else:
-        target = str(exp.get("target_modules", "qv"))
+        target = _canonical_target(str(exp.get("target_modules", "qv")))
         budget = float(exp.get("unfreeze_budget_pct", 1.0))
         cmd.extend(
             [

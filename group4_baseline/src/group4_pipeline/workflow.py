@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from common.run_metrics import RunTracker
-from src.group4_pipeline.helpers import resolve_group4_config
+from src.group4_pipeline.helpers import normalize_experiment_space, resolve_group4_config
 from src.group4_pipeline.workflow_stages import (
     stage1_preflight,
     stage2_build_plan,
@@ -50,6 +50,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     cfg, config_path = resolve_group4_config(PROJECT_ROOT, args.config)
+    norm_exp, norm_warnings = normalize_experiment_space(cfg.get("experiment_space", {}))
+    cfg["experiment_space"] = norm_exp
+    for w in norm_warnings:
+        print("config_migration_warning:", w)
     if not args.allow_non_subset:
         for section in ("required_inputs", "group4_outputs"):
             for key, path in cfg[section].items():
