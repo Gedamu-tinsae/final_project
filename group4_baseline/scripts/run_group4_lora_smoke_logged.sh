@@ -11,6 +11,7 @@ run_tag="group4_lora_smoke"
 log_file="$log_root/${ts}_${run_tag}.log"
 meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 
+executor="${EXECUTOR:-local}"  # local (TPU/default) | cloudexe
 gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
@@ -35,8 +36,10 @@ if [[ "$#" -eq 0 ]]; then
     --batch-size 1
     --epochs 1
     --append-manual-results
-    --overwrite
   )
+  if [[ "${ALLOW_OVERWRITE_OUTPUTS:-0}" == "1" ]]; then
+    peft_args+=(--overwrite)
+  fi
 else
   peft_args=("$@")
 fi
@@ -44,6 +47,7 @@ fi
 {
   echo "timestamp=$ts"
   echo "run_tag=$run_tag"
+  echo "executor=$executor"
   echo "gpuspec=$gpuspec"
   echo "repo_root=$repo_root"
   echo "project_root=$project_root"
@@ -54,7 +58,14 @@ fi
 } > "$meta_file"
 
 set +e
-cloudexe --gpuspec "$gpuspec" -- "$python_bin" "$peft_script" "${peft_args[@]}" 2>&1 | tee "$log_file"
+if [[ "$executor" == "cloudexe" ]]; then
+  cloudexe --gpuspec "$gpuspec" -- "$python_bin" "$peft_script" "${peft_args[@]}" 2>&1 | tee "$log_file"
+elif [[ "$executor" == "local" ]]; then
+  "$python_bin" "$peft_script" "${peft_args[@]}" 2>&1 | tee "$log_file"
+else
+  echo "Unknown EXECUTOR: $executor" | tee "$log_file"
+  exit 2
+fi
 status=${PIPESTATUS[0]}
 set -e
 

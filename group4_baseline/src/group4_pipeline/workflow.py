@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -75,6 +76,8 @@ def main() -> int:
     print("PROJECT_ROOT:", PROJECT_ROOT)
     print("CONFIG:", str(config_path) if config_path else "<built-in-defaults>")
     print("overwrite:", args.overwrite)
+    # Critical: this orchestrator spawns child TPU jobs; avoid parent process grabbing TPU.
+    os.environ["RUN_METRICS_DISABLE_TPU_SAMPLER"] = "1"
     tracker = RunTracker(
         group="group4",
         output_root=Path(args.output_root),

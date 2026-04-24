@@ -57,6 +57,8 @@ _TPU_DEVICE = None
 
 def _try_tpu_sample() -> dict[str, float] | None:
     global _TPU_JAX_INIT, _TPU_AVAILABLE, _TPU_DEVICE
+    if os.environ.get("RUN_METRICS_DISABLE_TPU_SAMPLER", "").strip().lower() in {"1", "true", "yes"}:
+        return None
     try:
         import jax  # type: ignore
     except Exception:
@@ -417,6 +419,8 @@ class _TeeWriter:
 
 
 def _safe_jax_backend() -> str:
+    if os.environ.get("RUN_METRICS_DISABLE_TPU_SAMPLER", "").strip().lower() in {"1", "true", "yes"}:
+        return "disabled"
     try:
         import jax  # type: ignore
 
@@ -426,6 +430,8 @@ def _safe_jax_backend() -> str:
 
 
 def _safe_jax_num_devices() -> int:
+    if os.environ.get("RUN_METRICS_DISABLE_TPU_SAMPLER", "").strip().lower() in {"1", "true", "yes"}:
+        return 0
     try:
         import jax  # type: ignore
 

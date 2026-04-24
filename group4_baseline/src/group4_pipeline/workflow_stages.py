@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import json
 import math
+import os
 import subprocess
 import sys
 import time
@@ -318,9 +319,11 @@ def stage3_execute_plan(cfg: dict[str, Any], args, project_root: Path) -> dict[s
         retry_sleep_sec = max(1, int(getattr(args, "plan_retry_sleep_sec", 20)))
         proc = None
         attempt = 0
+        child_env = os.environ.copy()
+        child_env.pop("RUN_METRICS_DISABLE_TPU_SAMPLER", None)
         while True:
             attempt += 1
-            proc = subprocess.run(cmd, cwd=str(project_root))
+            proc = subprocess.run(cmd, cwd=str(project_root), env=child_env)
             if proc.returncode == 0 or attempt > (retries + 1):
                 break
             print(

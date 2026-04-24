@@ -39,6 +39,8 @@ plan_target_modules="${PLAN_TARGET_MODULES:-}"  # comma list: qv,all
 plan_lora_ranks="${PLAN_LORA_RANKS:-}"  # comma list: 4,8,16
 plan_sft_budgets="${PLAN_SFT_BUDGETS:-}"  # comma list: 0.1,0.5,1.0
 allow_overwrite_experiment_outputs="${ALLOW_OVERWRITE_EXPERIMENT_OUTPUTS:-0}"
+plan_retries="${PLAN_RETRIES:-2}"
+plan_retry_sleep_sec="${PLAN_RETRY_SLEEP_SEC:-20}"
 
 # Evaluation controls
 # EVAL_MODE: none | template | human_pack | human_aggregate | api_judge
@@ -92,6 +94,8 @@ done
   echo "plan_lora_ranks=$plan_lora_ranks"
   echo "plan_sft_budgets=$plan_sft_budgets"
   echo "allow_overwrite_experiment_outputs=$allow_overwrite_experiment_outputs"
+  echo "plan_retries=$plan_retries"
+  echo "plan_retry_sleep_sec=$plan_retry_sleep_sec"
   echo "eval_mode=$eval_mode"
   echo "baseline_method=$baseline_method"
   echo "candidate_methods=$candidate_methods"
@@ -144,6 +148,8 @@ workflow_args=(
   --seed "$seed"
   --val-every-steps "$val_every_steps"
   --val-max-batches "$val_max_batches"
+  --plan-retries "$plan_retries"
+  --plan-retry-sleep-sec "$plan_retry_sleep_sec"
 )
 if [[ "$plan_overwrite" == "1" ]]; then
   workflow_args+=(--overwrite)

@@ -11,6 +11,7 @@ run_tag="group4_predictions"
 log_file="$log_root/${ts}_${run_tag}.log"
 meta_file="$log_root/${ts}_${run_tag}.meta.txt"
 
+executor="${EXECUTOR:-local}"  # local (TPU/default) | cloudexe
 gpuspec="${GPUSPEC:-H100x1}"
 python_bin="$project_root/group1_baseline/.venv/bin/python"
 pred_script="$repo_root/scripts/run_group4_smoke_predictions.py"
@@ -55,6 +56,7 @@ fi
 {
   echo "timestamp=$ts"
   echo "run_tag=$run_tag"
+  echo "executor=$executor"
   echo "gpuspec=$gpuspec"
   echo "repo_root=$repo_root"
   echo "project_root=$project_root"
@@ -66,7 +68,14 @@ fi
 } > "$meta_file"
 
 set +e
-cloudexe --gpuspec "$gpuspec" -- "$python_bin" "$pred_script" "${pred_args[@]}" 2>&1 | tee "$log_file"
+if [[ "$executor" == "cloudexe" ]]; then
+  cloudexe --gpuspec "$gpuspec" -- "$python_bin" "$pred_script" "${pred_args[@]}" 2>&1 | tee "$log_file"
+elif [[ "$executor" == "local" ]]; then
+  "$python_bin" "$pred_script" "${pred_args[@]}" 2>&1 | tee "$log_file"
+else
+  echo "Unknown EXECUTOR: $executor" | tee "$log_file"
+  exit 2
+fi
 status=${PIPESTATUS[0]}
 set -e
 
