@@ -7,6 +7,7 @@ import json
 import math
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -313,8 +314,22 @@ def stage3_execute_plan(cfg: dict[str, Any], args, project_root: Path) -> dict[s
         exp_id_, cmd, method = _build_experiment_cli_args(exp, args, project_root)
         print(f"execute: {exp_id_} method={method}")
         print("cmd:", " ".join(cmd))
-        proc = subprocess.run(cmd, cwd=str(project_root))
+        retries = max(0, int(getattr(args, "plan_retries", 2)))
+        retry_sleep_sec = max(1, int(getattr(args, "plan_retry_sleep_sec", 20)))
+        proc = None
+        attempt = 0
+        while True:
+            attempt += 1
+            proc = subprocess.run(cmd, cwd=str(project_root))
+            if proc.returncode == 0 or attempt > (retries + 1):
+                break
+            print(
+                f"retry: experiment={exp_id_} attempt={attempt}/{retries + 1} "
+                f"sleep_sec={retry_sleep_sec} returncode={proc.returncode}"
+            )
+            time.sleep(retry_sleep_sec)
         executed += 1
+        reg["attempts"] = int(attempt)
         reg["exit_code"] = int(proc.returncode)
         reg["method"] = method
         reg["finished"] = "ok" if proc.returncode == 0 else "error"

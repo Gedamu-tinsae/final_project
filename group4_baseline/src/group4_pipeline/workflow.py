@@ -36,6 +36,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--plan-target-modules", default="", help="Comma list among qv,all (empty=all).")
     p.add_argument("--plan-lora-ranks", default="", help="Comma list of LoRA ranks to include (empty=all).")
     p.add_argument("--plan-sft-budgets", default="", help="Comma list of selective_ft budget_pct values to include (empty=all).")
+    p.add_argument("--plan-retries", type=int, default=2, help="Retries per plan experiment on failure.")
+    p.add_argument("--plan-retry-sleep-sec", type=int, default=20, help="Sleep seconds between plan retries.")
     p.add_argument("--max-rows", type=int, default=64, help="Rows passed to run_group4_peft_smoke.py.")
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--epochs", type=int, default=1)
@@ -137,6 +139,9 @@ def main() -> int:
                             "results_manual_json_exists": ex["results_manual_json_exists"],
                         }
                     )
+                    if int(ex["failed"]) > 0:
+                        # Fail fast at workflow level so shell wrappers surface non-zero status.
+                        raise RuntimeError(f"Plan execution failed for {ex['failed']} experiment(s).")
 
     if "4" in enabled:
         with tracker.stage("stage4_summarize") as m:
