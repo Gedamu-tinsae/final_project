@@ -23,6 +23,7 @@ outputs/
 checkpoints/
 data/raw/
 data/processed/
+data/models/
 *.zip
 
 # OS/editor
