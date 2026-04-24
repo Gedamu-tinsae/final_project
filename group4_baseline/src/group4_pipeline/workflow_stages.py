@@ -209,7 +209,7 @@ def _build_experiment_cli_args(exp: dict[str, Any], args, project_root: Path) ->
     if method == "lora":
         target = str(exp.get("target_modules", "qv"))
         lora_variant = "qv"
-        if target == "all":
+        if target in {"all", "qv_mlp"}:
             lora_variant = "all_weights"
         cmd.extend(["--lora-variant", lora_variant, "--target-modules", target])
     else:

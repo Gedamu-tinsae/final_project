@@ -18,6 +18,7 @@ python_bin="$project_root/group1_baseline/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_group4_workflow.py"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
 eval_script="$repo_root/scripts/run_group4_eval.py"
+reconcile_script="$repo_root/scripts/reconcile_group4_registry.py"
 config_rel="${CONFIG_REL:-configs/workflow_paths_subset_10000.json}"
 
 # Train defaults
@@ -52,7 +53,7 @@ generations_jsonl_default="$eval_out_dir/group4_generations_template.jsonl"
 generations_jsonl="${GENERATIONS_JSONL:-$generations_jsonl_default}"
 human_results_jsonl="${HUMAN_RESULTS_JSONL:-$eval_out_dir/human_results_filled.jsonl}"
 
-for p in "$python_bin" "$workflow_script" "$peft_script" "$eval_script"; do
+for p in "$python_bin" "$workflow_script" "$peft_script" "$eval_script" "$reconcile_script"; do
   if [[ ! -e "$p" ]]; then
     echo "Missing required path: $p" >&2
     exit 1
@@ -187,6 +188,11 @@ if [[ "$run_selective_qv" == "1" ]]; then
     --append-manual-results \
     --overwrite
 fi
+
+# Reconcile completed plan entries from method runs to avoid re-running matching configs later.
+run_logged "registry_reconcile_after_methods" \
+  "$reconcile_script" \
+  --config "$config_rel"
 
 # 3) Summary + method comparison charts
 run_logged "workflow_stage4_pre_eval" \
