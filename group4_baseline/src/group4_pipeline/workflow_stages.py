@@ -219,6 +219,8 @@ def _build_experiment_cli_args(exp: dict[str, Any], args, project_root: Path) ->
         str(int(args.val_max_batches)),
         "--run-name",
         f"group4_peft_{exp_id}",
+        "--experiment-id",
+        exp_id,
         "--subset-token",
         args.subset_token,
     ]

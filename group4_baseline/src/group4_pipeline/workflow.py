@@ -82,6 +82,7 @@ def main() -> int:
         group="group4",
         output_root=Path(args.output_root),
         run_name=args.run_name,
+        namespace="workflow",
         config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(config_path) if config_path else "<built-in-defaults>"},
     )
     print("RUN_DIR:", tracker.run_dir)

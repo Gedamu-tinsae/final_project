@@ -224,11 +224,16 @@ class RunTracker:
         output_root: Path,
         run_name: str,
         config: dict[str, Any],
+        namespace: str = "",
     ) -> None:
         self.group = group
         self.output_root = output_root
+        self.namespace = str(namespace).strip().strip("/\\")
         self.run_id = f"{_utc_ts()}_{run_name}"
-        self.run_dir = output_root / group / self.run_id
+        base = output_root / group
+        if self.namespace:
+            base = base / self.namespace
+        self.run_dir = base / self.run_id
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.stage_records: list[StageRecord] = []
         self.artifacts: list[dict[str, Any]] = []
@@ -247,7 +252,15 @@ class RunTracker:
                 "jax_num_devices": _safe_jax_num_devices(),
             },
         )
-        self.write_json("stage_meta.json", {"group": group, "run_id": self.run_id, "stages": []})
+        self.write_json(
+            "stage_meta.json",
+            {
+                "group": group,
+                "namespace": self.namespace,
+                "run_id": self.run_id,
+                "stages": [],
+            },
+        )
         self.write_json("artifacts_manifest.json", {"artifacts": []})
         self.write_json("timing.json", {"run_id": self.run_id, "stages": []})
 
@@ -328,7 +341,10 @@ class RunTracker:
     def _stage_dir_for(self, stage_name: str) -> Path:
         m = re.search(r"(stage\d+)", stage_name)
         stage_bucket = m.group(1) if m else "stage_misc"
-        out = self.output_root / self.group / stage_bucket / self.run_id
+        base = self.output_root / self.group
+        if self.namespace:
+            base = base / self.namespace
+        out = base / stage_bucket / self.run_id
         out.mkdir(parents=True, exist_ok=True)
         return out
 
@@ -342,6 +358,7 @@ class RunTracker:
         wall = max(1e-9, time.perf_counter() - self._start)
         summary = {
             "group": self.group,
+            "namespace": self.namespace,
             "run_id": self.run_id,
             "run_dir": str(self.run_dir),
             "wall_time_sec": wall,
@@ -349,7 +366,15 @@ class RunTracker:
             "resources": self.resource_sampler.summary(),
         }
         self.write_json("metrics_summary.json", summary)
-        self.write_json("stage_meta.json", {"group": self.group, "run_id": self.run_id, "stages": [r.as_dict() for r in self.stage_records]})
+        self.write_json(
+            "stage_meta.json",
+            {
+                "group": self.group,
+                "namespace": self.namespace,
+                "run_id": self.run_id,
+                "stages": [r.as_dict() for r in self.stage_records],
+            },
+        )
         self.write_json("timing.json", {"run_id": self.run_id, "wall_time_sec": wall, "stages": [r.as_dict() for r in self.stage_records]})
         self.write_json("artifacts_manifest.json", {"artifacts": self.artifacts})
         _write_plot_data_stage_timing(self.run_dir, self.stage_records)

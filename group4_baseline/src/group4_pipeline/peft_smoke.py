@@ -100,6 +100,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group4_peft")
+    p.add_argument("--experiment-id", default="", help="Stable workflow experiment id (e.g., g4_lora_001).")
     p.add_argument("--subset-token", default="subset_10000_seed42")
     p.add_argument("--allow-non-subset", action="store_true")
     return p.parse_args()
@@ -114,6 +115,7 @@ def main() -> int:
         group="group4",
         output_root=Path(args.output_root),
         run_name=args.run_name,
+        namespace="experiments",
         config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(cfg_path) if cfg_path else "<built-in-defaults>"},
     )
     stdio = tracker.start_stdio_capture()
@@ -432,9 +434,11 @@ def main() -> int:
             f"_rows-{args.max_rows}"
             f"_seed-{args.seed}"
         )
-        out_projector = out_dir / f"{run_id}_projector.pkl"
-        out_llama = out_dir / f"{run_id}_llama.pkl"
-        out_metrics = out_dir / f"{run_id}_metrics.json"
+        experiment_id = str(args.experiment_id).strip() if str(args.experiment_id).strip() else run_id
+        storage_id = f"{experiment_id}_{run_id}" if experiment_id != run_id else run_id
+        out_projector = out_dir / f"{storage_id}_projector.pkl"
+        out_llama = out_dir / f"{storage_id}_llama.pkl"
+        out_metrics = out_dir / f"{storage_id}_metrics.json"
     
         if (out_projector.exists() or out_llama.exists() or out_metrics.exists()) and not args.overwrite:
             print("outputs already exist; pass --overwrite to replace.")
@@ -446,7 +450,9 @@ def main() -> int:
             pickle.dump(llama_state, f)
     
         metrics = {
+            "experiment_id": experiment_id,
             "run_id": run_id,
+            "storage_id": storage_id,
             "method": args.method,
             "lora_variant": args.lora_variant if args.method == "lora" else None,
             "target_modules": args.target_modules,
@@ -559,10 +565,12 @@ def main() -> int:
                 manual = {"results": []}
             results = manual.setdefault("results", [])
 
-            results = [r for r in results if r.get("experiment_id") != run_id]
+            results = [r for r in results if r.get("experiment_id") != experiment_id]
             results.append(
                 {
-                    "experiment_id": run_id,
+                    "experiment_id": experiment_id,
+                    "run_id": run_id,
+                    "storage_id": storage_id,
                     "method": args.method,
                     "lora_variant": args.lora_variant if args.method == "lora" else None,
                     "target_modules": args.target_modules,
