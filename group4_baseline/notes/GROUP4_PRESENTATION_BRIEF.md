@@ -6,7 +6,7 @@
   - `LoRA` (q/v adapter tuning)
   - `Selective FT` (update only a small targeted subset of base model weights)
 - We track:
-  - quality proxies (`smoke_loss_first`, `smoke_loss_last`, `val_loss`)
+  - quality proxies (`smoke_loss_first`, `smoke_loss_last`, `val_loss`, `val_token_accuracy`, `val_perplexity`, `win_rate_vs_baseline`)
   - compute/efficiency (`trainable_params_millions`, `wall_time_sec`, `steps_per_sec`, GPU stats)
 
 ## 2) Dependencies (Inputs from Other Groups)
@@ -55,7 +55,7 @@ Source files:
 ### Selective FT (qv, 1%)
 - trainable params: `5.767168M`
 - loss first/last: `4.0808 -> 3.3573`
-- val_loss: currently missing in this run artifact/manual row (needs rerun with latest script path)
+- val_loss / token_accuracy / perplexity: available on reruns with current script
 - wall time: `213.30s`
 - steps/sec: `0.3000`
 - GPU util avg/max: `0.25% / 13%`
@@ -71,9 +71,8 @@ Source files:
 - LoRA shows stronger parameter efficiency.
 - Selective FT showed improving training loss over the smoke run.
 - Final alignment/performance claim should use:
-  - validation loss from both methods
-  - win-rate/pairwise evaluation vs baseline
-- `win_rate_vs_baseline` is still placeholder (`0.0`/`null`) until evaluation stage is populated.
+  - validation loss + token accuracy + perplexity from both methods
+  - automatic `win_rate_vs_baseline` from current script (or pairwise eval if you add external judging)
 
 ## 8) Artifacts You Can Point To
 - `group4_baseline/artifacts/peft_smoke/*_metrics.json`
@@ -84,7 +83,7 @@ Source files:
 - `group4_baseline/data/processed/group4_results_manual.json`
 
 ## 9) Recommended Final Step Before Presentation
-- Re-run selective FT smoke once with current script and confirm `val_loss` is written in both:
-  - selective FT metrics JSON
+- Re-run LoRA + selective FT once with current script and confirm metrics are written in both:
+  - each method metrics JSON
   - `group4_results_manual.json`
 - Then run Stage 4 summary to generate final ranking markdown/json.

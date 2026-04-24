@@ -290,7 +290,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--append-manual-results",
         action="store_true",
-        help="Append this run to group4_results_manual.json (with placeholder win_rate/val_loss).",
+        help="Append this run to group4_results_manual.json with computed val_loss/win_rate/accuracy/perplexity.",
     )
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
@@ -405,6 +405,9 @@ def main() -> int:
         llama_state, replaced = _materialize_abstract_leaves(llama_state)
         if replaced:
             print(f"materialized abstract leaves in llama_state: {replaced}")
+        # Keep immutable baseline references for automatic win-rate comparison.
+        baseline_projector_state = projector_state
+        baseline_llama_state = llama_state
     
         if args.method == "lora":
             llama_mask = _build_lora_mask(llama_state)
@@ -555,6 +558,25 @@ def main() -> int:
                 attention_mask=mm["attention_mask"],
             )
             return masked_cross_entropy_loss(logits, mm["labels"])
+
+        @nnx.jit
+        def eval_step_metrics(projector_state, llama_state, batch):
+            proj = nnx.merge(projector_graphdef, projector_state)
+            llm = nnx.merge(llama_graphdef, llm_state := llama_state)
+            mm = make_multimodal_inputs(llm, proj, batch)
+            logits, _ = llm.forward_from_embeddings(
+                input_embeds=mm["input_embeds"],
+                positions=mm["positions"],
+                cache=None,
+                attention_mask=mm["attention_mask"],
+            )
+            labels = mm["labels"]
+            loss = masked_cross_entropy_loss(logits, labels)
+            preds = jnp.argmax(logits, axis=-1)
+            mask = labels != -100
+            correct = jnp.sum((preds == labels) & mask)
+            token_count = jnp.sum(mask)
+            return loss, correct, token_count
     
         val_loss, val_batches = _compute_val_loss(projector_state, llama_state)
         print(f"validation(epoch-end): val_loss={val_loss:.4f} batches={val_batches}")
@@ -568,6 +590,51 @@ def main() -> int:
             }
         )
         val_history = val_history_steps + val_history_epochs
+
+        # Rich validation metrics (accuracy/perplexity) and win-rate vs baseline.
+        val_losses_weighted = 0.0
+        val_tokens_total = 0
+        val_correct_total = 0
+        win_count = 0
+        tie_count = 0
+        compare_batches = 0
+        for batch in iterate_minibatches(val_rows, batch_size=args.batch_size):
+            tuned_loss_b, tuned_correct_b, tuned_tokens_b = eval_step_metrics(projector_state, llama_state, batch)
+            tuned_loss_v = float(tuned_loss_b)
+            tuned_tokens_i = int(tuned_tokens_b)
+            tuned_correct_i = int(tuned_correct_b)
+            if tuned_tokens_i > 0:
+                val_losses_weighted += tuned_loss_v * tuned_tokens_i
+                val_tokens_total += tuned_tokens_i
+                val_correct_total += tuned_correct_i
+
+            base_loss_v = float(eval_step(baseline_projector_state, baseline_llama_state, batch))
+            if tuned_loss_v < base_loss_v:
+                win_count += 1
+            elif tuned_loss_v == base_loss_v:
+                tie_count += 1
+            compare_batches += 1
+            if args.val_max_batches > 0 and compare_batches >= args.val_max_batches:
+                break
+
+        val_token_accuracy = (float(val_correct_total) / float(val_tokens_total)) if val_tokens_total > 0 else None
+        val_loss_token_weighted = (
+            float(val_losses_weighted) / float(val_tokens_total) if val_tokens_total > 0 else val_loss
+        )
+        try:
+            val_perplexity = float(jnp.exp(jnp.array(val_loss_token_weighted, dtype=jnp.float32)))
+        except Exception:
+            val_perplexity = None
+        win_rate_vs_baseline = (
+            float(win_count + 0.5 * tie_count) / float(compare_batches) if compare_batches > 0 else None
+        )
+        print(
+            "validation(metrics):",
+            f"token_accuracy={val_token_accuracy:.4f}" if val_token_accuracy is not None else "token_accuracy=None",
+            f"perplexity={val_perplexity:.4f}" if val_perplexity is not None else "perplexity=None",
+            f"win_rate_vs_baseline={win_rate_vs_baseline:.4f}" if win_rate_vs_baseline is not None else "win_rate_vs_baseline=None",
+            f"compare_batches={compare_batches}",
+        )
     
         run_id = (
             f"{args.method}"
@@ -605,6 +672,11 @@ def main() -> int:
             "loss_first": losses[0] if losses else None,
             "loss_last": losses[-1] if losses else None,
             "val_loss": val_loss,
+            "val_loss_token_weighted": val_loss_token_weighted,
+            "val_token_accuracy": val_token_accuracy,
+            "val_perplexity": val_perplexity,
+            "win_rate_vs_baseline": win_rate_vs_baseline,
+            "baseline_compare_batches": compare_batches,
             "projector_params": projector_param_count,
             "llama_params_total": llama_param_count,
             "llama_params_trainable": llama_trainable_count,
@@ -709,9 +781,11 @@ def main() -> int:
                     "trainable_params_millions": total_trainable / 1_000_000.0,
                     "smoke_loss_first": losses[0] if losses else None,
                     "smoke_loss_last": losses[-1] if losses else None,
-                    "win_rate_vs_baseline": 0.0,
+                    "win_rate_vs_baseline": win_rate_vs_baseline,
                     "val_loss": val_loss,
-                    "notes": "Auto-appended from run_group4_peft_smoke.py; replace win_rate_vs_baseline after pairwise eval.",
+                    "val_token_accuracy": val_token_accuracy,
+                    "val_perplexity": val_perplexity,
+                    "notes": "Auto-appended from run_group4_peft_smoke.py.",
                 }
             )
             manual["results"] = results

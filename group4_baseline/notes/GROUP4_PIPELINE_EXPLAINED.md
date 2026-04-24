@@ -21,6 +21,7 @@ What it does:
 - Stage 1: preflight checks (upstream artifacts exist).
 - Stage 2: generate experiment plan JSON.
 - Stage 3: generate run registry JSON.
+- Stage 3b (optional): execute planned experiments with `--execute-plan`.
 - Stage 4: summarize results (ranking), if results file exists.
 
 What it does **not** do:
@@ -39,8 +40,9 @@ What it does:
 - Writes run metrics including:
   - trainable parameter counts
   - loss progression (`loss_first`, `loss_last`)
-  - runtime/throughput (`wall_time_sec`, `steps_per_sec`, `samples_per_sec`)
-  - GPU stats (`gpu_stats`: util/mem/power)
+- runtime/throughput (`wall_time_sec`, `steps_per_sec`, `samples_per_sec`)
+- GPU stats (`gpu_stats`: util/mem/power)
+- validation metrics (`val_loss`, `val_token_accuracy`, `val_perplexity`, `win_rate_vs_baseline`)
 
 Why it says "smoke":
 - It uses reduced defaults (`--max-rows`, low epochs/batch), so you can validate setup quickly.
@@ -62,9 +64,7 @@ python scripts/run_group4_peft_smoke.py --method lora --lora-variant qv --target
 python scripts/run_group4_peft_smoke.py --method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0 --max-rows 64 --epochs 1 --batch-size 1 --append-manual-results
 ```
 
-4. Add evaluation-side metrics (`val_loss`, `win_rate_vs_baseline`) to manual results.
-
-5. Generate final comparison summary:
+4. Generate final comparison summary:
 ```bash
 python scripts/run_group4_workflow.py --stages 4
 ```
@@ -89,5 +89,5 @@ python scripts/run_group4_workflow.py --stages 4
 
 ## Presentation mapping
 - Efficiency: `trainable_params_millions`
-- Quality: `loss_last` (plus `val_loss`, `win_rate_vs_baseline` after eval)
+- Quality: `loss_last`, `val_loss`, `val_token_accuracy`, `val_perplexity`, `win_rate_vs_baseline`
 - Compute cost: `wall_time_sec`, `steps_per_sec`, `gpu_stats`

@@ -36,6 +36,12 @@ Outputs:
 
 By default, existing files are reused (`overwrite=False`).
 
+Optional: execute planned experiments directly from workflow stage 3:
+
+```bash
+python scripts/run_group4_workflow.py --stages 1,2,3 --execute-plan --max-experiments 2 --max-rows 64 --epochs 1
+```
+
 ## 4) CloudExe usage
 
 ```bash
@@ -73,6 +79,8 @@ Key presentation metrics now logged per run:
 - `trainable_params_total`, `trainable_params_millions`
 - `loss_first`, `loss_last`
 - `val_loss`
+- `val_token_accuracy`, `val_perplexity`
+- `win_rate_vs_baseline` (automatic batch-wise baseline comparison)
 - `wall_time_sec`, `steps_per_sec`, `samples_per_sec`
 - `gpu_stats` (avg/max GPU util, avg/max memory used, avg/max power)
 
@@ -80,7 +88,7 @@ Key presentation metrics now logged per run:
 
 Run at least one LoRA config and one selective-FT config, then compare:
 1. Efficiency: `trainable_params_millions`
-2. Quality: `loss_last` (plus `val_loss` / `win_rate_vs_baseline` when available)
+2. Quality: `loss_last`, `val_loss`, `val_token_accuracy`, `val_perplexity`, `win_rate_vs_baseline`
 3. Compute cost: `wall_time_sec`, `steps_per_sec`, `gpu_stats`
 
 Suggested smoke pair:
@@ -88,8 +96,8 @@ Suggested smoke pair:
 - Selective FT: `--method selective_ft --target-modules qv --selection-strategy magnitude --budget-pct 1.0`
 
 Important:
-- `run_group4_peft_smoke.py` now logs `val_loss` automatically from a held-out split in the smoke subset.
-- `win_rate_vs_baseline` still requires pairwise eval and should be filled after that eval step.
+- `run_group4_peft_smoke.py` logs validation metrics (`val_loss`, token accuracy, perplexity) automatically from held-out split.
+- `win_rate_vs_baseline` is computed automatically as per-batch win rate vs frozen baseline state on the same val split.
 
 ## 7) After training runs are executed
 
