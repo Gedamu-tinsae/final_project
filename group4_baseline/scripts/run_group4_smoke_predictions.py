@@ -53,6 +53,30 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--manifest-json", default=str(PROJECT_ROOT / "artifacts" / "peft_smoke" / "stage1_manifest_smoke_group4.json"))
     p.add_argument("--max-samples", type=int, default=5)
     p.add_argument("--max-decode-tokens", type=int, default=40)
+    p.add_argument(
+        "--method-id-field",
+        choices=["experiment_id", "run_id"],
+        default="experiment_id",
+        help="Field from metrics JSON used as eval method id.",
+    )
+    p.add_argument(
+        "--include-group1-baseline",
+        action="store_true",
+        help="Also score Group1 stage2 baseline checkpoint and emit method='baseline'.",
+    )
+    p.add_argument(
+        "--baseline-method-name",
+        default="baseline",
+        help="Method id used when --include-group1-baseline is enabled.",
+    )
+    p.add_argument(
+        "--baseline-projector-state",
+        default=str(GROUP1_ROOT / "artifacts" / "subsets" / "subset_10000_seed42" / "projector_stage2.pkl"),
+    )
+    p.add_argument(
+        "--baseline-llama-state",
+        default=str(GROUP1_ROOT / "artifacts" / "subsets" / "subset_10000_seed42" / "llama_stage2.pkl"),
+    )
     p.add_argument("--output-json", default=str(PROJECT_ROOT / "data" / "processed" / "group4_prediction_samples.json"))
     p.add_argument("--output-md", default=str(PROJECT_ROOT / "data" / "processed" / "group4_prediction_samples.md"))
     return p.parse_args()
@@ -92,6 +116,57 @@ def _load_llama_for_run(run: dict[str, Any], llama_dir: Path):
     return loaded["llama_model"], loaded["tokenizer"]
 
 
+def _score_model_on_rows(
+    *,
+    rows: list[dict[str, Any]],
+    llm: Any,
+    proj: Any,
+    tokenizer: Any,
+    max_decode_tokens: int,
+) -> tuple[list[dict[str, Any]], list[float], list[float]]:
+    sample_rows: list[dict[str, Any]] = []
+    losses: list[float] = []
+    accuracies: list[float] = []
+
+    for i, row in enumerate(rows):
+        batch = stage1_collate_fn([row])
+        mm = make_multimodal_inputs(llm, proj, batch)
+        logits, _ = llm.forward_from_embeddings(
+            input_embeds=mm["input_embeds"],
+            positions=mm["positions"],
+            cache=None,
+            attention_mask=mm["attention_mask"],
+        )
+        loss = float(masked_cross_entropy_loss(logits, mm["labels"]))
+        losses.append(loss)
+
+        shift_logits = logits[:, :-1, :]
+        shift_labels = mm["labels"][:, 1:]
+        pred_ids = jnp.argmax(shift_logits, axis=-1)[0]
+        true_ids = shift_labels[0]
+        valid = true_ids != -100
+        pred_valid = pred_ids[valid]
+        true_valid = true_ids[valid]
+
+        acc = 0.0
+        if true_valid.size > 0:
+            acc = float(jnp.mean((pred_valid == true_valid).astype(jnp.float32)))
+        accuracies.append(acc)
+        sample_id = row.get("image_id", None)
+        sample_rows.append(
+            {
+                "sample_index": i,
+                "sample_id": str(sample_id) if sample_id is not None else f"s_{i:04d}",
+                "vision_path": row.get("vision_path", ""),
+                "loss": loss,
+                "token_accuracy": acc,
+                "pred_text": _decode_ids(tokenizer, pred_valid.tolist(), max_decode_tokens),
+                "label_text": _decode_ids(tokenizer, true_valid.tolist(), max_decode_tokens),
+            }
+        )
+    return sample_rows, losses, accuracies
+
+
 def main() -> int:
     args = parse_args()
     load_dotenv_file(GROUP1_ROOT / ".env")
@@ -116,6 +191,8 @@ def main() -> int:
         metrics_path = Path(metrics_path_raw).resolve()
         run = json.loads(metrics_path.read_text(encoding="utf-8"))
         run_id = str(run.get("run_id", metrics_path.stem))
+        experiment_id = str(run.get("experiment_id", "")).strip()
+        method_id = str(run.get(args.method_id_field, "")).strip() or run_id
 
         llama_model, tokenizer = _load_llama_for_run(run, llama_dir)
         out_dim = int(llama_model.config.embed_dim)
@@ -131,48 +208,18 @@ def main() -> int:
         proj = nnx.merge(projector_graphdef, projector_state)
         llm = nnx.merge(llama_graphdef, llama_state)
 
-        sample_rows: list[dict[str, Any]] = []
-        losses: list[float] = []
-        accuracies: list[float] = []
-
-        for i, row in enumerate(rows):
-            batch = stage1_collate_fn([row])
-            mm = make_multimodal_inputs(llm, proj, batch)
-            logits, _ = llm.forward_from_embeddings(
-                input_embeds=mm["input_embeds"],
-                positions=mm["positions"],
-                cache=None,
-                attention_mask=mm["attention_mask"],
-            )
-            loss = float(masked_cross_entropy_loss(logits, mm["labels"]))
-            losses.append(loss)
-
-            shift_logits = logits[:, :-1, :]
-            shift_labels = mm["labels"][:, 1:]
-            pred_ids = jnp.argmax(shift_logits, axis=-1)[0]
-            true_ids = shift_labels[0]
-            valid = true_ids != -100
-            pred_valid = pred_ids[valid]
-            true_valid = true_ids[valid]
-
-            acc = 0.0
-            if true_valid.size > 0:
-                acc = float(jnp.mean((pred_valid == true_valid).astype(jnp.float32)))
-            accuracies.append(acc)
-
-            sample_rows.append(
-                {
-                    "sample_index": i,
-                    "vision_path": row.get("vision_path", ""),
-                    "loss": loss,
-                    "token_accuracy": acc,
-                    "pred_text": _decode_ids(tokenizer, pred_valid.tolist(), args.max_decode_tokens),
-                    "label_text": _decode_ids(tokenizer, true_valid.tolist(), args.max_decode_tokens),
-                }
-            )
+        sample_rows, losses, accuracies = _score_model_on_rows(
+            rows=rows,
+            llm=llm,
+            proj=proj,
+            tokenizer=tokenizer,
+            max_decode_tokens=args.max_decode_tokens,
+        )
 
         run_summary = {
             "run_id": run_id,
+            "experiment_id": experiment_id or None,
+            "method_id": method_id,
             "method": run.get("method"),
             "lora_variant": run.get("lora_variant"),
             "target_modules": run.get("target_modules"),
@@ -184,8 +231,57 @@ def main() -> int:
         }
         all_results.append(run_summary)
         print(
-            f"[{run_id}] avg_loss={run_summary['avg_loss']:.4f} "
+            f"[{method_id}] avg_loss={run_summary['avg_loss']:.4f} "
             f"avg_token_accuracy={run_summary['avg_token_accuracy']:.4f}"
+        )
+
+    if args.include_group1_baseline:
+        baseline_projector_state = Path(args.baseline_projector_state).resolve()
+        baseline_llama_state = Path(args.baseline_llama_state).resolve()
+        if not baseline_projector_state.exists():
+            raise FileNotFoundError(f"Missing baseline projector state: {baseline_projector_state}")
+        if not baseline_llama_state.exists():
+            raise FileNotFoundError(f"Missing baseline llama state: {baseline_llama_state}")
+
+        loaded = load_llama_model_and_tokenizer(local_dir=llama_dir, dtype="bfloat16", use_mesh=False)
+        baseline_model = loaded["llama_model"]
+        baseline_tokenizer = loaded["tokenizer"]
+        out_dim = int(baseline_model.config.embed_dim)
+        baseline_projector = VisionProjector(in_dim=in_dim, out_dim=out_dim, rngs=nnx.Rngs(0))
+        baseline_projector_graphdef, _ = nnx.split(baseline_projector)
+        baseline_llama_graphdef, _ = nnx.split(baseline_model)
+
+        with baseline_projector_state.open("rb") as f:
+            baseline_proj_state = pickle.load(f)
+        with baseline_llama_state.open("rb") as f:
+            baseline_llm_state = pickle.load(f)
+
+        baseline_proj = nnx.merge(baseline_projector_graphdef, baseline_proj_state)
+        baseline_llm = nnx.merge(baseline_llama_graphdef, baseline_llm_state)
+        sample_rows, losses, accuracies = _score_model_on_rows(
+            rows=rows,
+            llm=baseline_llm,
+            proj=baseline_proj,
+            tokenizer=baseline_tokenizer,
+            max_decode_tokens=args.max_decode_tokens,
+        )
+        baseline_summary = {
+            "run_id": args.baseline_method_name,
+            "experiment_id": args.baseline_method_name,
+            "method_id": args.baseline_method_name,
+            "method": "baseline",
+            "lora_variant": None,
+            "target_modules": None,
+            "avg_loss": float(sum(losses) / max(1, len(losses))),
+            "avg_token_accuracy": float(sum(accuracies) / max(1, len(accuracies))),
+            "num_samples": len(sample_rows),
+            "samples": sample_rows,
+            "metrics_json": None,
+        }
+        all_results.append(baseline_summary)
+        print(
+            f"[{args.baseline_method_name}] avg_loss={baseline_summary['avg_loss']:.4f} "
+            f"avg_token_accuracy={baseline_summary['avg_token_accuracy']:.4f}"
         )
 
     out_json = Path(args.output_json).resolve()
@@ -209,6 +305,7 @@ def main() -> int:
         lines += [
             f"## {r['run_id']}",
             "",
+            f"- method_id: {r.get('method_id')}",
             f"- method: {r.get('method')}",
             f"- lora_variant: {r.get('lora_variant')}",
             f"- target_modules: {r.get('target_modules')}",
