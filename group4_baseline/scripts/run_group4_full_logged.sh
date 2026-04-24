@@ -18,7 +18,6 @@ python_bin="$project_root/group1_baseline/.venv/bin/python"
 workflow_script="$repo_root/scripts/run_group4_workflow.py"
 peft_script="$repo_root/scripts/run_group4_peft_smoke.py"
 eval_script="$repo_root/scripts/run_group4_eval.py"
-reconcile_script="$repo_root/scripts/reconcile_group4_registry.py"
 config_rel="${CONFIG_REL:-configs/workflow_paths_subset_10000.json}"
 
 # Train defaults
@@ -31,10 +30,15 @@ seed="${SEED:-42}"
 val_every_steps="${VAL_EVERY_STEPS:-200}"
 val_max_batches="${VAL_MAX_BATCHES:-0}"
 
-# Which training methods to run
-run_lora_qv="${RUN_LORA_QV:-1}"
-run_lora_all_weights="${RUN_LORA_ALL_WEIGHTS:-1}"
-run_selective_qv="${RUN_SELECTIVE_QV:-1}"
+# Plan execution controls (modular + resume-safe by default)
+plan_overwrite="${PLAN_OVERWRITE:-0}"  # 0 keeps existing plan/registry so resume works.
+max_experiments="${MAX_EXPERIMENTS:-0}"  # 0 = all selected experiments
+plan_experiment_ids="${PLAN_EXPERIMENT_IDS:-}"  # comma list of experiment_id values
+plan_methods="${PLAN_METHODS:-}"  # comma list: lora,selective_ft
+plan_target_modules="${PLAN_TARGET_MODULES:-}"  # comma list: qv,all
+plan_lora_ranks="${PLAN_LORA_RANKS:-}"  # comma list: 4,8,16
+plan_sft_budgets="${PLAN_SFT_BUDGETS:-}"  # comma list: 0.1,0.5,1.0
+allow_overwrite_experiment_outputs="${ALLOW_OVERWRITE_EXPERIMENT_OUTPUTS:-0}"
 
 # Evaluation controls
 # EVAL_MODE: none | template | human_pack | human_aggregate | api_judge
@@ -53,7 +57,7 @@ generations_jsonl_default="$eval_out_dir/group4_generations_template.jsonl"
 generations_jsonl="${GENERATIONS_JSONL:-$generations_jsonl_default}"
 human_results_jsonl="${HUMAN_RESULTS_JSONL:-$eval_out_dir/human_results_filled.jsonl}"
 
-for p in "$python_bin" "$workflow_script" "$peft_script" "$eval_script" "$reconcile_script"; do
+for p in "$python_bin" "$workflow_script" "$eval_script"; do
   if [[ ! -e "$p" ]]; then
     echo "Missing required path: $p" >&2
     exit 1
@@ -80,9 +84,14 @@ done
   echo "seed=$seed"
   echo "val_every_steps=$val_every_steps"
   echo "val_max_batches=$val_max_batches"
-  echo "run_lora_qv=$run_lora_qv"
-  echo "run_lora_all_weights=$run_lora_all_weights"
-  echo "run_selective_qv=$run_selective_qv"
+  echo "plan_overwrite=$plan_overwrite"
+  echo "max_experiments=$max_experiments"
+  echo "plan_experiment_ids=$plan_experiment_ids"
+  echo "plan_methods=$plan_methods"
+  echo "plan_target_modules=$plan_target_modules"
+  echo "plan_lora_ranks=$plan_lora_ranks"
+  echo "plan_sft_budgets=$plan_sft_budgets"
+  echo "allow_overwrite_experiment_outputs=$allow_overwrite_experiment_outputs"
   echo "eval_mode=$eval_mode"
   echo "baseline_method=$baseline_method"
   echo "candidate_methods=$candidate_methods"
@@ -120,79 +129,44 @@ run_logged() {
   fi
 }
 
-# 1) Workflow preflight/plan/registry
-run_logged "workflow_stage123" \
-  "$workflow_script" \
-  --config "$config_rel" \
-  --stages 1,2,3 \
-  --overwrite
-
-# 2) Training runs (method comparisons)
-if [[ "$run_lora_qv" == "1" ]]; then
-  run_logged "peft_lora_qv" \
-    "$peft_script" \
-    --config "$config_rel" \
-    --method lora \
-    --lora-variant qv \
-    --target-modules qv \
-    --max-rows "$max_rows" \
-    --max-rows-guard 10000 \
-    --batch-size "$batch_size" \
-    --epochs "$epochs" \
-    --learning-rate "$learning_rate" \
-    --dtype "$dtype" \
-    --seed "$seed" \
-    --val-every-steps "$val_every_steps" \
-    --val-max-batches "$val_max_batches" \
-    --append-manual-results \
-    --overwrite
-fi
-
-if [[ "$run_lora_all_weights" == "1" ]]; then
-  run_logged "peft_lora_all_weights" \
-    "$peft_script" \
-    --config "$config_rel" \
-    --method lora \
-    --lora-variant all_weights \
-    --target-modules all \
-    --max-rows "$max_rows" \
-    --max-rows-guard 10000 \
-    --batch-size "$batch_size" \
-    --epochs "$epochs" \
-    --learning-rate "$learning_rate" \
-    --dtype "$dtype" \
-    --seed "$seed" \
-    --val-every-steps "$val_every_steps" \
-    --val-max-batches "$val_max_batches" \
-    --append-manual-results \
-    --overwrite
-fi
-
-if [[ "$run_selective_qv" == "1" ]]; then
-  run_logged "peft_selective_ft_qv" \
-    "$peft_script" \
-    --config "$config_rel" \
-    --method selective_ft \
-    --target-modules qv \
-    --selection-strategy magnitude \
-    --budget-pct 1.0 \
-    --max-rows "$max_rows" \
-    --max-rows-guard 10000 \
-    --batch-size "$batch_size" \
-    --epochs "$epochs" \
-    --learning-rate "$learning_rate" \
-    --dtype "$dtype" \
-    --seed "$seed" \
-    --val-every-steps "$val_every_steps" \
-    --val-max-batches "$val_max_batches" \
-    --append-manual-results \
-    --overwrite
-fi
-
-# Reconcile completed plan entries from method runs to avoid re-running matching configs later.
-run_logged "registry_reconcile_after_methods" \
-  "$reconcile_script" \
+# 1) Workflow stage1+2+3 and execute plan (default all selected plan experiments).
+workflow_args=(
+  "$workflow_script"
   --config "$config_rel"
+  --stages 1,2,3
+  --execute-plan
+  --max-experiments "$max_experiments"
+  --max-rows "$max_rows"
+  --batch-size "$batch_size"
+  --epochs "$epochs"
+  --learning-rate "$learning_rate"
+  --dtype "$dtype"
+  --seed "$seed"
+  --val-every-steps "$val_every_steps"
+  --val-max-batches "$val_max_batches"
+)
+if [[ "$plan_overwrite" == "1" ]]; then
+  workflow_args+=(--overwrite)
+fi
+if [[ "$allow_overwrite_experiment_outputs" == "1" ]]; then
+  workflow_args+=(--allow-overwrite-experiment-outputs)
+fi
+if [[ -n "$plan_experiment_ids" ]]; then
+  workflow_args+=(--plan-experiment-ids "$plan_experiment_ids")
+fi
+if [[ -n "$plan_methods" ]]; then
+  workflow_args+=(--plan-methods "$plan_methods")
+fi
+if [[ -n "$plan_target_modules" ]]; then
+  workflow_args+=(--plan-target-modules "$plan_target_modules")
+fi
+if [[ -n "$plan_lora_ranks" ]]; then
+  workflow_args+=(--plan-lora-ranks "$plan_lora_ranks")
+fi
+if [[ -n "$plan_sft_budgets" ]]; then
+  workflow_args+=(--plan-sft-budgets "$plan_sft_budgets")
+fi
+run_logged "workflow_stage123_execute_plan" "${workflow_args[@]}"
 
 # 3) Summary + method comparison charts
 run_logged "workflow_stage4_pre_eval" \

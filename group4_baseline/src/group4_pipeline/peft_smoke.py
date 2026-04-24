@@ -421,6 +421,9 @@ def main() -> int:
             f"win_rate_vs_baseline={win_rate_vs_baseline:.4f}" if win_rate_vs_baseline is not None else "win_rate_vs_baseline=None",
             f"compare_batches={compare_batches}",
         )
+
+        # Snapshot shared resource sampler for cross-method comparison fields.
+        resource_summary = tracker.resource_sampler.summary()
     
         run_id = (
             f"{args.method}"
@@ -474,6 +477,7 @@ def main() -> int:
             "steps_per_sec": steps_per_sec,
             "samples_per_sec": samples_per_sec,
             "gpu_stats": gpu_stats,
+            "resource_summary": resource_summary,
             "projector_state_path": str(out_projector),
             "llama_state_path": str(out_llama),
         }
@@ -567,6 +571,7 @@ def main() -> int:
                     "trainable_params_millions": total_trainable / 1_000_000.0,
                     "smoke_loss_first": losses[0] if losses else None,
                     "smoke_loss_last": losses[-1] if losses else None,
+                    "loss_last": losses[-1] if losses else None,
                     "win_rate_vs_baseline": win_rate_vs_baseline,
                     "val_loss": val_loss,
                     "val_token_accuracy": val_token_accuracy,
@@ -574,6 +579,21 @@ def main() -> int:
                     "wall_time_sec": wall_time_sec,
                     "steps_per_sec": steps_per_sec,
                     "samples_per_sec": samples_per_sec,
+                    "gpu_mem_used_max_mb": (
+                        float(gpu_stats.get("gpu_mem_used_max_mb"))
+                        if isinstance(gpu_stats, dict) and gpu_stats.get("gpu_mem_used_max_mb") is not None
+                        else None
+                    ),
+                    "rss_kb_max": (
+                        float(resource_summary.get("rss_kb_max"))
+                        if isinstance(resource_summary, dict) and resource_summary.get("rss_kb_max") is not None
+                        else None
+                    ),
+                    "tpu_mem_used_max_mb": (
+                        float(resource_summary.get("tpu_mem_used_max_mb"))
+                        if isinstance(resource_summary, dict) and resource_summary.get("tpu_mem_used_max_mb") is not None
+                        else None
+                    ),
                     "notes": "Auto-appended from run_group4_peft_smoke.py.",
                 }
             )

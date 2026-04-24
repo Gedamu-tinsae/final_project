@@ -31,6 +31,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--overwrite", action="store_true", help="Allow overwriting generated plan/registry/summary files.")
     p.add_argument("--execute-plan", action="store_true", help="When used with stage 3, execute pending experiments from the plan.")
     p.add_argument("--max-experiments", type=int, default=0, help="Max experiments to run when --execute-plan is set (0=all).")
+    p.add_argument("--plan-experiment-ids", default="", help="Comma list of experiment_id values to execute (empty=all).")
+    p.add_argument("--plan-methods", default="", help="Comma list among lora,selective_ft (empty=all).")
+    p.add_argument("--plan-target-modules", default="", help="Comma list among qv,all (empty=all).")
+    p.add_argument("--plan-lora-ranks", default="", help="Comma list of LoRA ranks to include (empty=all).")
+    p.add_argument("--plan-sft-budgets", default="", help="Comma list of selective_ft budget_pct values to include (empty=all).")
     p.add_argument("--max-rows", type=int, default=64, help="Rows passed to run_group4_peft_smoke.py.")
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--epochs", type=int, default=1)
@@ -115,6 +120,8 @@ def main() -> int:
                 else:
                     print(
                         "executed:",
+                        f"selected={ex['selected']}",
+                        f"total_plan={ex['total_plan_experiments']}",
                         f"count={ex['executed']}",
                         f"succeeded={ex['succeeded']}",
                         f"failed={ex['failed']}",
@@ -122,6 +129,8 @@ def main() -> int:
                     )
                     m.update(
                         {
+                            "selected": ex["selected"],
+                            "total_plan_experiments": ex["total_plan_experiments"],
                             "executed": ex["executed"],
                             "succeeded": ex["succeeded"],
                             "failed": ex["failed"],
@@ -145,6 +154,18 @@ def main() -> int:
                     print("fig_runtime:", out["fig_runtime"]["mode"], "->", out["fig_runtime"]["path"])
                 if "fig_val_loss" in out:
                     print("fig_val_loss:", out["fig_val_loss"]["mode"], "->", out["fig_val_loss"]["path"])
+                if "fig_train_loss_last" in out:
+                    print("fig_train_loss_last:", out["fig_train_loss_last"]["mode"], "->", out["fig_train_loss_last"]["path"])
+                if "fig_steps_per_sec" in out:
+                    print("fig_steps_per_sec:", out["fig_steps_per_sec"]["mode"], "->", out["fig_steps_per_sec"]["path"])
+                if "fig_samples_per_sec" in out:
+                    print("fig_samples_per_sec:", out["fig_samples_per_sec"]["mode"], "->", out["fig_samples_per_sec"]["path"])
+                if "fig_gpu_mem_max_mb" in out:
+                    print("fig_gpu_mem_max_mb:", out["fig_gpu_mem_max_mb"]["mode"], "->", out["fig_gpu_mem_max_mb"]["path"])
+                if "fig_tpu_mem_max_mb" in out:
+                    print("fig_tpu_mem_max_mb:", out["fig_tpu_mem_max_mb"]["mode"], "->", out["fig_tpu_mem_max_mb"]["path"])
+                if "fig_rss_kb_max" in out:
+                    print("fig_rss_kb_max:", out["fig_rss_kb_max"]["mode"], "->", out["fig_rss_kb_max"]["path"])
                 print("best_experiment:", out["best_experiment"])
                 m.update({"best_experiment": out["best_experiment"], "summary_mode": out["summary_json"]["mode"]})
 
