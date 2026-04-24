@@ -272,6 +272,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--val-frac", type=float, default=0.2, help="Fraction of smoke rows held out for validation.")
     p.add_argument("--epochs", type=int, default=1)
     p.add_argument("--log-every", type=int, default=10)
+    p.add_argument(
+        "--val-every-steps",
+        type=int,
+        default=200,
+        help="Run validation every N train steps (0 disables step-level validation).",
+    )
+    p.add_argument(
+        "--val-max-batches",
+        type=int,
+        default=0,
+        help="Max validation batches per validation pass (0 means full validation split).",
+    )
     p.add_argument("--learning-rate", type=float, default=1e-5)
     p.add_argument("--dtype", choices=["bfloat16", "float32"], default="bfloat16")
     p.add_argument("--seed", type=int, default=42)
@@ -471,9 +483,23 @@ def main() -> int:
             train_rows = manifest_rows[:1]
             val_rows = manifest_rows[1:] or manifest_rows[:1]
         print(f"split: train_rows={len(train_rows)} val_rows={len(val_rows)} val_frac={args.val_frac}")
+
+        def _compute_val_loss(projector_state, llama_state) -> tuple[float, int]:
+            val_losses: list[float] = []
+            val_batches = 0
+            for batch in iterate_minibatches(val_rows, batch_size=args.batch_size):
+                val_losses.append(float(eval_step(projector_state, llama_state, batch)))
+                val_batches += 1
+                if args.val_max_batches > 0 and val_batches >= args.val_max_batches:
+                    break
+            val_loss_local = float(sum(val_losses) / max(1, len(val_losses)))
+            return val_loss_local, val_batches
+
         step = 0
         losses: list[float] = []
         train_history: list[dict[str, Any]] = []
+        val_history_steps: list[dict[str, Any]] = []
+        val_history_epochs: list[dict[str, Any]] = []
         samples_seen = 0
         timer_start = time.perf_counter()
         gpu_sampler = _GPUSampler(interval_sec=2.0)
@@ -495,6 +521,21 @@ def main() -> int:
                 if step % args.log_every == 0:
                     print(f"epoch={epoch} step={step} loss={lv:.4f}")
                 train_history.append({"epoch": int(epoch), "step": int(step), "loss": lv})
+                if args.val_every_steps > 0 and step > 0 and (step % args.val_every_steps == 0):
+                    val_loss_step, val_batches_step = _compute_val_loss(projector_state, llama_state)
+                    print(
+                        f"validation(step): epoch={epoch} step={step} val_loss={val_loss_step:.4f} "
+                        f"batches={val_batches_step}"
+                    )
+                    val_history_steps.append(
+                        {
+                            "epoch": int(epoch),
+                            "step": int(step),
+                            "val_loss": float(val_loss_step),
+                            "batches": int(val_batches_step),
+                            "scope": "step",
+                        }
+                    )
                 step += 1
         gpu_sampler.stop()
         wall_time_sec = max(1e-9, time.perf_counter() - timer_start)
@@ -515,12 +556,18 @@ def main() -> int:
             )
             return masked_cross_entropy_loss(logits, mm["labels"])
     
-        val_losses: list[float] = []
-        for batch in iterate_minibatches(val_rows, batch_size=args.batch_size):
-            val_losses.append(float(eval_step(projector_state, llama_state, batch)))
-        val_loss = float(sum(val_losses) / max(1, len(val_losses)))
-        print(f"validation: val_loss={val_loss:.4f} batches={len(val_losses)}")
-        val_history = [{"epoch": int(args.epochs - 1), "val_loss": val_loss}]
+        val_loss, val_batches = _compute_val_loss(projector_state, llama_state)
+        print(f"validation(epoch-end): val_loss={val_loss:.4f} batches={val_batches}")
+        val_history_epochs.append(
+            {
+                "epoch": int(args.epochs - 1),
+                "step": int(step),
+                "val_loss": float(val_loss),
+                "batches": int(val_batches),
+                "scope": "epoch",
+            }
+        )
+        val_history = val_history_steps + val_history_epochs
     
         run_id = (
             f"{args.method}"
@@ -577,6 +624,8 @@ def main() -> int:
         tracker.write_json("peft/metrics.json", metrics)
         tracker.write_csv("peft/train_history.csv", train_history)
         tracker.write_csv("peft/val_history.csv", val_history)
+        tracker.write_csv("peft/val_history_steps.csv", val_history_steps)
+        tracker.write_csv("peft/val_history_epochs.csv", val_history_epochs)
         _try_plot_series(
             tracker.run_dir / "peft" / "fig_train_loss.png",
             [float(r["step"]) for r in train_history],
@@ -598,6 +647,22 @@ def main() -> int:
             [float(r["epoch"]) for r in val_history],
             [float(r["val_loss"]) for r in val_history],
             "Group4 PEFT Val Loss",
+            "epoch",
+            "val_loss",
+        )
+        _try_plot_series(
+            tracker.run_dir / "peft" / "fig_val_loss_steps.png",
+            [float(r["step"]) for r in val_history_steps],
+            [float(r["val_loss"]) for r in val_history_steps],
+            "Group4 PEFT Val Loss (Step-level)",
+            "step",
+            "val_loss",
+        )
+        _try_plot_series(
+            tracker.run_dir / "peft" / "fig_val_loss_epochs.png",
+            [float(r["epoch"]) for r in val_history_epochs],
+            [float(r["val_loss"]) for r in val_history_epochs],
+            "Group4 PEFT Val Loss (Epoch-level)",
             "epoch",
             "val_loss",
         )
