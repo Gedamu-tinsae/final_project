@@ -41,7 +41,7 @@ from src.training.train_pipeline import (  # type: ignore
     build_smoke_manifest_from_existing_features,
 )
 from src.group4_pipeline.gpu_sampler import GPUSampler
-from src.group4_pipeline.helpers import expand_project_root, load_module_from_file, try_plot_series
+from src.group4_pipeline.helpers import load_module_from_file, resolve_group4_config, try_plot_series
 from src.group4_pipeline.param_masks import (
     build_lora_mask,
     build_selective_mask,
@@ -104,18 +104,17 @@ def main() -> int:
     args = parse_args()
     load_dotenv_file(GROUP1_ROOT / ".env")
 
-    cfg_path = (PROJECT_ROOT / args.config).resolve()
-    raw_cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-    cfg = expand_project_root(raw_cfg, PROJECT_ROOT)
+    cfg, cfg_path = resolve_group4_config(PROJECT_ROOT, args.config)
     tracker = RunTracker(
         group="group4",
         output_root=Path(args.output_root),
         run_name=args.run_name,
-        config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(cfg_path)},
+        config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(cfg_path) if cfg_path else "<built-in-defaults>"},
     )
     stdio = tracker.start_stdio_capture()
     try:
         print("RUN_DIR:", tracker.run_dir)
+        print("CONFIG_SOURCE:", str(cfg_path) if cfg_path else "<built-in-defaults>")
 
         req = cfg["required_inputs"]
         stage1_manifest = Path(req["group1_stage1_manifest"])

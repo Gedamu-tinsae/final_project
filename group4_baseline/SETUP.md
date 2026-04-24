@@ -130,6 +130,53 @@ Outputs:
 - `data/processed/group4_results_summary.json`
 - `data/processed/group4_results_summary.md`
 
+## 7.5) Modular Evaluation (Human + API)
+
+Input requirement:
+- A generations JSONL with rows containing:
+  - `sample_id`, `prompt`, `method`, `output`
+
+### A) Build human-eval pack
+
+```bash
+python scripts/run_group4_eval.py \
+  --generations-jsonl data/processed/subsets/subset_10000_seed42/group4_generations.jsonl \
+  --baseline-method baseline \
+  --mode human_pack
+```
+
+Outputs under `<group4_outputs parent>/eval`:
+- `pairwise_requests.jsonl`
+- `human_results_template.jsonl`
+- `instructions.md`
+
+### B) Aggregate human judgments and update Group4 results
+
+```bash
+python scripts/run_group4_eval.py \
+  --generations-jsonl data/processed/subsets/subset_10000_seed42/group4_generations.jsonl \
+  --baseline-method baseline \
+  --mode human_aggregate \
+  --human-results-jsonl data/processed/subsets/subset_10000_seed42/eval/human_results_filled.jsonl \
+  --update-results-manual
+```
+
+### C) API judging (OpenAI-compatible)
+
+```bash
+python scripts/run_group4_eval.py \
+  --generations-jsonl data/processed/subsets/subset_10000_seed42/group4_generations.jsonl \
+  --baseline-method baseline \
+  --mode api_judge \
+  --openai-model gpt-4.1-mini \
+  --update-results-manual
+```
+
+Notes:
+- Requires `OPENAI_API_KEY` (or `--openai-api-key`) for API judging.
+- After eval update, rerun:
+  - `python scripts/run_group4_workflow.py --stages 4 --overwrite`
+
 ## 9) Cross-run comparison report + figures
 
 After running Group1/Group2/Group4 workflows, generate one presentation-ready comparison pack:

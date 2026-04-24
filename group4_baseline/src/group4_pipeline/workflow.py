@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
 from common.run_metrics import RunTracker
-from src.group4_pipeline.helpers import expand_project_root
+from src.group4_pipeline.helpers import resolve_group4_config
 from src.group4_pipeline.workflow_stages import (
     stage1_preflight,
     stage2_build_plan,
@@ -50,9 +49,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    config_path = (PROJECT_ROOT / args.config).resolve()
-    raw_cfg = json.loads(config_path.read_text(encoding="utf-8"))
-    cfg = expand_project_root(raw_cfg, PROJECT_ROOT)
+    cfg, config_path = resolve_group4_config(PROJECT_ROOT, args.config)
     if not args.allow_non_subset:
         for section in ("required_inputs", "group4_outputs"):
             for key, path in cfg[section].items():
@@ -65,13 +62,13 @@ def main() -> int:
     enabled = {str(i) for i in range(1, 5)} if args.stages == "all" else {s.strip() for s in args.stages.split(",") if s.strip()}
 
     print("PROJECT_ROOT:", PROJECT_ROOT)
-    print("CONFIG:", config_path)
+    print("CONFIG:", str(config_path) if config_path else "<built-in-defaults>")
     print("overwrite:", args.overwrite)
     tracker = RunTracker(
         group="group4",
         output_root=Path(args.output_root),
         run_name=args.run_name,
-        config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(config_path)},
+        config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(config_path) if config_path else "<built-in-defaults>"},
     )
     print("RUN_DIR:", tracker.run_dir)
 
