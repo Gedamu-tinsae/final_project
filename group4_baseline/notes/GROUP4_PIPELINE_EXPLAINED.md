@@ -3,6 +3,7 @@
 ## Short answer
 - `run_group4_workflow.py` is orchestration only (planning/checking/summarizing).
 - `run_group4_peft_smoke.py` does real training updates (LoRA or selective fine-tuning), but on a small budget by default.
+- Previous metric gaps are now addressed: `win_rate_vs_baseline`, `val_token_accuracy`, and `val_perplexity` are computed automatically.
 
 So yes: despite the word "smoke", it is still actual gradient-based training.  
 "Smoke" here means **small/quick run**, not "fake run".
