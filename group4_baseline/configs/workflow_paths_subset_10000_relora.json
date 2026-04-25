@@ -13,15 +13,15 @@
   },
 
   "group4_outputs": {
-    "plan_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/group4_experiment_plan.json",
-    "run_registry_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/group4_run_registry.json",
-    "results_manual_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/group4_results_manual.json",
-    "summary_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/group4_results_summary.json",
-    "summary_md": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/group4_results_summary.md"
+    "plan_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/relora/group4_relora_experiment_plan.json",
+    "run_registry_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/relora/group4_relora_run_registry.json",
+    "results_manual_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/relora/group4_relora_results_manual.json",
+    "summary_json": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/relora/group4_relora_results_summary.json",
+    "summary_md": "${PROJECT_ROOT}/data/processed/subsets/subset_10000_seed42/relora/group4_relora_results_summary.md"
   },
 
   "experiment_space": {
-    "methods": ["lora", "selective_ft", "relora"],
+    "methods": ["relora"],
     "lora_ranks": [4, 8, 16],
     "target_modules": ["qv", "all"],
     "selective_ft_budget_pct": [0.1, 0.5, 1.0],
@@ -31,3 +31,4 @@
     "seed": 42
   }
 }
+

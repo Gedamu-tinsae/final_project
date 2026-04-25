@@ -92,7 +92,7 @@ def _decode_ids(tokenizer, ids, max_tokens: int) -> str:
 def _load_llama_for_run(run: dict[str, Any], llama_dir: Path):
     method = str(run.get("method"))
     dtype = str(run.get("dtype", "bfloat16"))
-    if method == "lora":
+    if method in {"lora", "relora"}:
         lora_variant = str(run.get("lora_variant", "qv"))
         if lora_variant == "all_weights":
             model_file = GROUP4_BACKBONES_ROOT / "model_all_weights.py"

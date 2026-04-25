@@ -30,6 +30,13 @@ def _canonical_target(target: str) -> str:
     return t
 
 
+def _canonical_method(method: str) -> str:
+    m = str(method).strip().lower()
+    if m not in {"lora", "selective_ft", "relora"}:
+        raise ValueError(f"Unsupported method value: {method}")
+    return m
+
+
 def _csv_set(raw: str) -> set[str]:
     return {x.strip() for x in str(raw).split(",") if x.strip()}
 
@@ -101,6 +108,8 @@ def stage2_build_plan(cfg: dict[str, Any], overwrite: bool) -> dict[str, Any]:
         if ct not in targets:
             targets.append(ct)
     selective_budgets = list(exp["selective_ft_budget_pct"])
+    relora_merge_freqs = [int(x) for x in exp.get("relora_merge_freq", [500])]
+    relora_final_merge = bool(exp.get("relora_final_merge", True))
     seed = int(exp["seed"])
     train_steps = int(exp["train_budget_steps"])
 
@@ -115,6 +124,21 @@ def stage2_build_plan(cfg: dict[str, Any], overwrite: bool) -> dict[str, Any]:
                         "method": "lora",
                         "lora_rank": int(rank),
                         "target_modules": str(target),
+                        "train_budget_steps": train_steps,
+                        "seed": seed,
+                    }
+                )
+                exp_id += 1
+        elif method == "relora":
+            for rank, target, merge_freq in itertools.product(lora_ranks, targets, relora_merge_freqs):
+                experiments.append(
+                    {
+                        "experiment_id": f"g4_relora_{exp_id:03d}",
+                        "method": "relora",
+                        "lora_rank": int(rank),
+                        "target_modules": str(target),
+                        "relora_merge_freq": int(merge_freq),
+                        "relora_final_merge": relora_final_merge,
                         "train_budget_steps": train_steps,
                         "seed": seed,
                     }
@@ -188,10 +212,8 @@ def _save_registry(path: Path, registry: dict[str, Any]) -> None:
 
 
 def _build_experiment_cli_args(exp: dict[str, Any], args, project_root: Path) -> tuple[str, list[str], str]:
-    method = str(exp.get("method", ""))
+    method = _canonical_method(str(exp.get("method", "")))
     exp_id = str(exp.get("experiment_id", ""))
-    if method not in {"lora", "selective_ft"}:
-        raise ValueError(f"Unsupported method in experiment {exp_id}: {method}")
 
     cmd: list[str] = [
         sys.executable,
@@ -229,12 +251,17 @@ def _build_experiment_cli_args(exp: dict[str, Any], args, project_root: Path) ->
     if args.allow_overwrite_experiment_outputs:
         cmd.append("--overwrite")
 
-    if method == "lora":
+    if method in {"lora", "relora"}:
         target = _canonical_target(str(exp.get("target_modules", "qv")))
         lora_variant = "qv"
         if target == "all":
             lora_variant = "all_weights"
         cmd.extend(["--lora-variant", lora_variant, "--target-modules", target])
+        if method == "relora":
+            relora_merge_freq = int(exp.get("relora_merge_freq", 500))
+            cmd.extend(["--relora-merge-freq", str(relora_merge_freq)])
+            if bool(exp.get("relora_final_merge", True)):
+                cmd.append("--relora-final-merge")
     else:
         target = _canonical_target(str(exp.get("target_modules", "qv")))
         budget = float(exp.get("unfreeze_budget_pct", 1.0))
@@ -274,15 +301,16 @@ def stage3_execute_plan(cfg: dict[str, Any], args, project_root: Path) -> dict[s
             )
 
     requested_ids = _csv_set(getattr(args, "plan_experiment_ids", ""))
-    requested_methods = {m.lower() for m in _csv_set(getattr(args, "plan_methods", ""))}
+    requested_methods = {_canonical_method(m) for m in _csv_set(getattr(args, "plan_methods", ""))}
     requested_targets = {_canonical_target(t) for t in _csv_set(getattr(args, "plan_target_modules", ""))}
     requested_lora_ranks = {int(x) for x in _csv_set(getattr(args, "plan_lora_ranks", ""))}
     requested_sft_budgets = {float(x) for x in _csv_set(getattr(args, "plan_sft_budgets", ""))}
+    requested_relora_merge_freqs = {int(x) for x in _csv_set(getattr(args, "plan_relora_merge_freqs", ""))}
 
     selected_experiments: list[dict[str, Any]] = []
     for exp in plan.get("experiments", []):
         exp_id = str(exp.get("experiment_id", ""))
-        method = str(exp.get("method", "")).strip().lower()
+        method = _canonical_method(str(exp.get("method", "")))
         target = _canonical_target(str(exp.get("target_modules", "qv")))
         if requested_ids and exp_id not in requested_ids:
             continue
@@ -290,8 +318,11 @@ def stage3_execute_plan(cfg: dict[str, Any], args, project_root: Path) -> dict[s
             continue
         if requested_targets and target not in requested_targets:
             continue
-        if method == "lora" and requested_lora_ranks:
+        if method in {"lora", "relora"} and requested_lora_ranks:
             if int(exp.get("lora_rank", -1)) not in requested_lora_ranks:
+                continue
+        if method == "relora" and requested_relora_merge_freqs:
+            if int(exp.get("relora_merge_freq", -1)) not in requested_relora_merge_freqs:
                 continue
         if method == "selective_ft" and requested_sft_budgets:
             if float(exp.get("unfreeze_budget_pct", -1.0)) not in requested_sft_budgets:

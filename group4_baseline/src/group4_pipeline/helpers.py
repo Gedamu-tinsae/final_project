@@ -71,10 +71,12 @@ def default_group4_config(project_root: Path) -> dict[str, Any]:
             "summary_md": str(project_root / "data/processed/subsets/subset_10000_seed42/group4_results_summary.md"),
         },
         "experiment_space": {
-            "methods": ["lora", "selective_ft"],
+            "methods": ["lora", "selective_ft", "relora"],
             "lora_ranks": [4, 8, 16],
             "target_modules": ["qv", "all"],
             "selective_ft_budget_pct": [0.1, 0.5, 1.0],
+            "relora_merge_freq": [500],
+            "relora_final_merge": True,
             "train_budget_steps": 500,
             "seed": 42,
         },
@@ -106,11 +108,11 @@ def normalize_experiment_space(exp: dict[str, Any]) -> tuple[dict[str, Any], lis
     """
     warnings: list[str] = []
 
-    methods_raw = [str(x) for x in exp.get("methods", ["lora", "selective_ft"])]
+    methods_raw = [str(x) for x in exp.get("methods", ["lora", "selective_ft", "relora"])]
     methods: list[str] = []
     for m in methods_raw:
         mm = m.strip().lower()
-        if mm not in {"lora", "selective_ft"}:
+        if mm not in {"lora", "selective_ft", "relora"}:
             raise ValueError(f"Unsupported method in experiment_space.methods: {m}")
         if mm not in methods:
             methods.append(mm)
@@ -150,12 +152,23 @@ def normalize_experiment_space(exp: dict[str, Any]) -> tuple[dict[str, Any], lis
         raise ValueError(f"Invalid train_budget_steps: {train_budget_steps}")
 
     seed = int(exp.get("seed", 42))
+    relora_merge_freq_raw = exp.get("relora_merge_freq", [500])
+    relora_merge_freq: list[int] = []
+    for f in relora_merge_freq_raw:
+        ff = int(f)
+        if ff <= 0:
+            raise ValueError(f"Invalid relora merge frequency: {ff}")
+        if ff not in relora_merge_freq:
+            relora_merge_freq.append(ff)
+    relora_final_merge = bool(exp.get("relora_final_merge", True))
 
     normalized = {
         "methods": methods,
         "lora_ranks": lora_ranks,
         "target_modules": targets,
         "selective_ft_budget_pct": selective_budgets,
+        "relora_merge_freq": relora_merge_freq,
+        "relora_final_merge": relora_final_merge,
         "train_budget_steps": train_budget_steps,
         "seed": seed,
     }

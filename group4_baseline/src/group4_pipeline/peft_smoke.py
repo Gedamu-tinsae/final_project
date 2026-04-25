@@ -49,6 +49,7 @@ from src.group4_pipeline.param_masks import (
     materialize_abstract_leaves,
     zero_grads_where_mask_false,
 )
+from src.group4_pipeline.relora import relora_merge_and_reset, relora_merge_only
 
 
 
@@ -56,7 +57,7 @@ from src.group4_pipeline.param_masks import (
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run Group4 PEFT smoke training.")
     p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
-    p.add_argument("--method", choices=["lora", "selective_ft"], required=True)
+    p.add_argument("--method", choices=["lora", "selective_ft", "relora"], required=True)
     p.add_argument(
         "--lora-variant",
         choices=["qv", "all_weights"],
@@ -101,6 +102,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-root", default=str(REPO_ROOT / "outputs"))
     p.add_argument("--run-name", default="group4_peft")
     p.add_argument("--experiment-id", default="", help="Stable workflow experiment id (e.g., g4_lora_001).")
+    p.add_argument("--relora-merge-freq", type=int, default=500, help="ReLoRA merge/reset frequency in train steps.")
+    p.add_argument("--relora-final-merge", action="store_true", help="Apply final LoRA merge into base weights before save.")
     p.add_argument("--subset-token", default="subset_10000_seed42")
     p.add_argument("--allow-non-subset", action="store_true")
     return p.parse_args()
@@ -115,7 +118,7 @@ def main() -> int:
         group="group4",
         output_root=Path(args.output_root),
         run_name=args.run_name,
-        namespace="experiments",
+        namespace=("relora_experiments" if args.method == "relora" else "experiments"),
         config={"args": vars(args), "project_root": str(PROJECT_ROOT), "config": str(cfg_path) if cfg_path else "<built-in-defaults>"},
     )
     stdio = tracker.start_stdio_capture()
@@ -138,7 +141,7 @@ def main() -> int:
         if not stage1_projector_state_path.exists():
             raise FileNotFoundError(stage1_projector_state_path)
     
-        out_dir = PROJECT_ROOT / "artifacts" / "peft_smoke"
+        out_dir = PROJECT_ROOT / "artifacts" / ("relora_smoke" if args.method == "relora" else "peft_smoke")
         out_dir.mkdir(parents=True, exist_ok=True)
         smoke_manifest = out_dir / "stage1_manifest_smoke_group4.json"
         smoke_info = build_smoke_manifest_from_existing_features(
@@ -158,7 +161,7 @@ def main() -> int:
         )
         print("llama artifacts:", art["mode"], art["local_dir"])
     
-        if args.method == "lora":
+        if args.method in {"lora", "relora"}:
             if args.lora_variant == "qv":
                 model_file = GROUP4_BACKBONES_ROOT / "model_qv.py"
                 params_file = GROUP4_BACKBONES_ROOT / "params_qv.py"
@@ -176,7 +179,10 @@ def main() -> int:
                 mesh=None,
                 dtype=model_dtype,
             )
-            print("loaded Group4 LoRA model:", model_file.name, params_file.name)
+            if args.method == "relora":
+                print("loaded Group4 ReLoRA model:", model_file.name, params_file.name)
+            else:
+                print("loaded Group4 LoRA model:", model_file.name, params_file.name)
         else:
             loaded = load_llama_model_and_tokenizer(local_dir=llama_dir, dtype=args.dtype, use_mesh=False)
             llama_model = loaded["llama_model"]
@@ -197,12 +203,19 @@ def main() -> int:
         baseline_projector_state = projector_state
         baseline_llama_state = llama_state
     
-        if args.method == "lora":
+        if args.method in {"lora", "relora"}:
             llama_mask = build_lora_mask(llama_state)
             # collect selected count for logging
             selected_count = sum(1 for x in jax.tree_util.tree_leaves(llama_mask) if bool(x))
             candidate_count = len(jax.tree_util.tree_leaves(llama_mask))
-            print(f"mask lora: selected_leaves={selected_count} / total_leaves={candidate_count}")
+            if args.method == "relora":
+                print(
+                    f"mask relora: selected_leaves={selected_count} / total_leaves={candidate_count}",
+                    f"merge_freq={args.relora_merge_freq}",
+                    f"final_merge={args.relora_final_merge}",
+                )
+            else:
+                print(f"mask lora: selected_leaves={selected_count} / total_leaves={candidate_count}")
         else:
             llama_mask, candidate_count, selected_count = build_selective_mask(
                 llama_state,
@@ -327,6 +340,11 @@ def main() -> int:
         timer_start = time.perf_counter()
         gpu_sampler = GPUSampler(interval_sec=2.0)
         gpu_sampler.start()
+        relora_merge_steps: list[int] = []
+        relora_cycle_merges = 0
+        relora_final_merge_applied = False
+        relora_final_merge_count = 0
+        relora_rng = jax.random.PRNGKey(args.seed)
         for epoch in range(args.epochs):
             for batch in iterate_minibatches(train_rows, batch_size=args.batch_size):
                 projector_state, llama_state, opt_state, loss = train_step(projector_state, llama_state, opt_state, batch)
@@ -360,6 +378,23 @@ def main() -> int:
                         }
                     )
                 step += 1
+                if args.method == "relora" and args.relora_merge_freq > 0 and (step % int(args.relora_merge_freq) == 0):
+                    relora_rng, merge_rng = jax.random.split(relora_rng)
+                    llama_state, merged_count = relora_merge_and_reset(
+                        llama_state,
+                        rng=merge_rng,
+                    )
+                    opt_state = tx.init({"projector": projector_state, "llama": llama_state})
+                    relora_merge_steps.append(int(step))
+                    relora_cycle_merges += int(merged_count)
+                    print(
+                        f"[ReLoRA] merge_reset step={step} merged_modules={merged_count} "
+                        f"optimizer_state_reset=1"
+                    )
+        if args.method == "relora" and args.relora_final_merge:
+            llama_state, relora_final_merge_count = relora_merge_only(llama_state)
+            relora_final_merge_applied = True
+            print(f"[ReLoRA] final_merge merged_modules={relora_final_merge_count}")
         gpu_sampler.stop()
         wall_time_sec = max(1e-9, time.perf_counter() - timer_start)
         steps_per_sec = float(step) / wall_time_sec
@@ -429,8 +464,9 @@ def main() -> int:
     
         run_id = (
             f"{args.method}"
-            f"_lora-{args.lora_variant if args.method == 'lora' else 'na'}"
+            f"_lora-{args.lora_variant if args.method in {'lora', 'relora'} else 'na'}"
             f"_target-{args.target_modules}"
+            f"_mf-{args.relora_merge_freq if args.method == 'relora' else 'na'}"
             f"_rows-{args.max_rows}"
             f"_seed-{args.seed}"
         )
@@ -454,10 +490,15 @@ def main() -> int:
             "run_id": run_id,
             "storage_id": storage_id,
             "method": args.method,
-            "lora_variant": args.lora_variant if args.method == "lora" else None,
+            "lora_variant": args.lora_variant if args.method in {"lora", "relora"} else None,
             "target_modules": args.target_modules,
             "selection_strategy": args.selection_strategy if args.method == "selective_ft" else None,
             "budget_pct": args.budget_pct if args.method == "selective_ft" else None,
+            "relora_merge_freq": args.relora_merge_freq if args.method == "relora" else None,
+            "relora_merge_steps": relora_merge_steps if args.method == "relora" else None,
+            "relora_num_merges": relora_cycle_merges if args.method == "relora" else None,
+            "relora_final_merge": relora_final_merge_applied if args.method == "relora" else None,
+            "relora_final_merge_count": relora_final_merge_count if args.method == "relora" else None,
             "smoke_rows": args.max_rows,
             "batch_size": args.batch_size,
             "epochs": args.epochs,
@@ -572,10 +613,13 @@ def main() -> int:
                     "run_id": run_id,
                     "storage_id": storage_id,
                     "method": args.method,
-                    "lora_variant": args.lora_variant if args.method == "lora" else None,
+                    "lora_variant": args.lora_variant if args.method in {"lora", "relora"} else None,
                     "target_modules": args.target_modules,
                     "selection_strategy": args.selection_strategy if args.method == "selective_ft" else None,
                     "budget_pct": args.budget_pct if args.method == "selective_ft" else None,
+                    "relora_merge_freq": args.relora_merge_freq if args.method == "relora" else None,
+                    "relora_num_merges": relora_cycle_merges if args.method == "relora" else None,
+                    "relora_final_merge": relora_final_merge_applied if args.method == "relora" else None,
                     "trainable_params_millions": total_trainable / 1_000_000.0,
                     "smoke_loss_first": losses[0] if losses else None,
                     "smoke_loss_last": losses[-1] if losses else None,

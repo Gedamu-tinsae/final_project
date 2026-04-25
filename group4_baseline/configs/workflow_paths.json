@@ -21,10 +21,12 @@
   },
 
   "experiment_space": {
-    "methods": ["lora", "selective_ft"],
+    "methods": ["lora", "selective_ft", "relora"],
     "lora_ranks": [4, 8, 16],
     "target_modules": ["qv", "all"],
     "selective_ft_budget_pct": [0.1, 0.5, 1.0],
+    "relora_merge_freq": [500],
+    "relora_final_merge": true,
     "train_budget_steps": 500,
     "seed": 42
   }

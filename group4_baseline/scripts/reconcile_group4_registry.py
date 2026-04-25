@@ -15,6 +15,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Reconcile Group4 run registry with existing results.")
     p.add_argument("--config", default="configs/workflow_paths_subset_10000.json")
     p.add_argument("--default-lora-rank", type=int, default=8)
+    p.add_argument("--default-relora-merge-freq", type=int, default=500)
     p.add_argument("--default-sft-budget", type=float, default=1.0)
     p.add_argument("--overwrite-status", action="store_true")
     return p.parse_args()
@@ -46,7 +47,13 @@ def _approx_eq(a: float, b: float, eps: float = 1e-9) -> bool:
     return abs(a - b) <= eps
 
 
-def _matches(plan_exp: dict[str, Any], result_row: dict[str, Any], default_lora_rank: int, default_sft_budget: float) -> bool:
+def _matches(
+    plan_exp: dict[str, Any],
+    result_row: dict[str, Any],
+    default_lora_rank: int,
+    default_relora_merge_freq: int,
+    default_sft_budget: float,
+) -> bool:
     method = str(plan_exp.get("method", "")).strip().lower()
     if method != str(result_row.get("method", "")).strip().lower():
         return False
@@ -56,14 +63,24 @@ def _matches(plan_exp: dict[str, Any], result_row: dict[str, Any], default_lora_
     if plan_target != result_target:
         return False
 
-    if method == "lora":
+    if method in {"lora", "relora"}:
         plan_rank = int(plan_exp.get("lora_rank", default_lora_rank))
         result_rank = result_row.get("lora_rank", default_lora_rank)
         try:
             result_rank_i = int(result_rank)
         except Exception:
             result_rank_i = default_lora_rank
-        return plan_rank == result_rank_i
+        if plan_rank != result_rank_i:
+            return False
+        if method == "relora":
+            plan_mf = int(plan_exp.get("relora_merge_freq", default_relora_merge_freq))
+            result_mf = result_row.get("relora_merge_freq", default_relora_merge_freq)
+            try:
+                result_mf_i = int(result_mf)
+            except Exception:
+                result_mf_i = default_relora_merge_freq
+            return plan_mf == result_mf_i
+        return True
 
     if method == "selective_ft":
         plan_budget = float(plan_exp.get("unfreeze_budget_pct", default_sft_budget))
@@ -116,7 +133,13 @@ def main() -> int:
 
         matched = None
         for row in rows:
-            if _matches(exp, row, args.default_lora_rank, args.default_sft_budget):
+            if _matches(
+                exp,
+                row,
+                args.default_lora_rank,
+                args.default_relora_merge_freq,
+                args.default_sft_budget,
+            ):
                 matched = row
                 break
         if matched is None:
@@ -140,8 +163,10 @@ def main() -> int:
         entry["source"] = "reconciled_from_results_manual"
         entry["matched_result_experiment_id"] = str(matched.get("experiment_id", ""))
         entry["target_modules"] = str(exp.get("target_modules", ""))
-        if entry["method"] == "lora":
+        if entry["method"] in {"lora", "relora"}:
             entry["lora_rank"] = int(exp.get("lora_rank", args.default_lora_rank))
+            if entry["method"] == "relora":
+                entry["relora_merge_freq"] = int(exp.get("relora_merge_freq", args.default_relora_merge_freq))
         else:
             entry["unfreeze_budget_pct"] = float(exp.get("unfreeze_budget_pct", args.default_sft_budget))
         marked += 1
