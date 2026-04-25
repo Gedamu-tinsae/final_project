@@ -84,10 +84,20 @@ def default_group4_config(project_root: Path) -> dict[str, Any]:
 
 
 def resolve_group4_config(project_root: Path, config_arg: str) -> tuple[dict[str, Any], Path | None]:
+    requested = (project_root / config_arg).resolve()
+    default_subset = (project_root / "configs/workflow_paths_subset_10000.json").resolve()
+    default_base = (project_root / "configs/workflow_paths.json").resolve()
+
+    # Safety: if caller explicitly points to a non-default config path and it does
+    # not exist, fail fast. Do not silently fall back to another config.
+    default_tokens = {"configs/workflow_paths_subset_10000.json", "configs/workflow_paths.json"}
+    if config_arg not in default_tokens and not requested.exists():
+        raise FileNotFoundError(f"Requested config not found: {requested}")
+
     candidate_paths = [
-        (project_root / config_arg).resolve(),
-        (project_root / "configs/workflow_paths_subset_10000.json").resolve(),
-        (project_root / "configs/workflow_paths.json").resolve(),
+        requested,
+        default_subset,
+        default_base,
     ]
     seen: set[Path] = set()
     for p in candidate_paths:
