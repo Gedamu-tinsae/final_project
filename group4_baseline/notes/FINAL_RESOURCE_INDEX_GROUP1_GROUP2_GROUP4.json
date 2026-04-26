@@ -1,0 +1,64 @@
+{
+  "project_root_tpu": "/home/tinsae_kiya_gedamu/final_project",
+  "group1": {
+    "workflow_run_dir": "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow",
+    "metrics_summary_json": "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/metrics_summary.json",
+    "param_audit_summary_json": "/home/tinsae_kiya_gedamu/final_project/group1_baseline/outputs/param_audit/20260423_184717_group1_param_audit/trainable_params_summary.json",
+    "artifacts": {
+      "projector_stage1": "/home/tinsae_kiya_gedamu/final_project/group1_baseline/artifacts/subsets/subset_10000_seed42/projector_stage1.pkl",
+      "projector_stage2": "/home/tinsae_kiya_gedamu/final_project/group1_baseline/artifacts/subsets/subset_10000_seed42/projector_stage2.pkl",
+      "llama_stage2": "/home/tinsae_kiya_gedamu/final_project/group1_baseline/artifacts/subsets/subset_10000_seed42/llama_stage2.pkl"
+    },
+    "figures": [
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/fig_stage_timing.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/fig_stage_memory.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/stage5/fig_train_loss.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/stage5/fig_val_loss.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/stage6/fig_train_loss.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group1/20260423_043833_group1_workflow/stage6/fig_val_loss.png"
+    ]
+  },
+  "group2": {
+    "engine_comparison_summary_json": "/home/tinsae_kiya_gedamu/final_project/group2_baseline/data/processed/subsets/subset_10000_seed42/stage2_instruction/engine_comparison_summary.json",
+    "all_results_manual_json": "/home/tinsae_kiya_gedamu/final_project/group2_baseline/data/processed/subsets/subset_10000_seed42/stage2_instruction/all_results_manual.json",
+    "report_table_md": "/home/tinsae_kiya_gedamu/final_project/group2_baseline/data/processed/subsets/subset_10000_seed42/stage2_instruction/report_figures/engine_results_table.md",
+    "workflow_runs": [
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260423_142218_group2_workflow",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260423_142651_group2_workflow",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260424_120641_group2_workflow"
+    ],
+    "figures": [
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260423_142651_group2_workflow/fig_stage_timing.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260423_142651_group2_workflow/fig_stage_memory.png",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group2/20260423_142651_group2_workflow/fig_overview_dashboard.png"
+    ]
+  },
+  "group4": {
+    "workflow_run_dir": "/home/tinsae_kiya_gedamu/final_project/outputs/group4/workflow/20260424_144444_group4_workflow",
+    "summary_run_dir": "/home/tinsae_kiya_gedamu/final_project/outputs/group4/workflow/20260424_213118_group4_workflow",
+    "results_manual_json": "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/group4_results_manual.json",
+    "results_summary_json": "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/group4_results_summary.json",
+    "results_summary_md": "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/group4_results_summary.md",
+    "method_comparison_figures": [
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_trainable_params.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_runtime_sec.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_val_loss.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_steps_per_sec.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_samples_per_sec.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_tpu_mem_max_mb.png",
+      "/home/tinsae_kiya_gedamu/final_project/group4_baseline/data/processed/subsets/subset_10000_seed42/fig_method_comparison_rss_kb_max.png"
+    ],
+    "selected_experiment_dirs": [
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group4/experiments/20260424_144446_group4_peft_g4_lora_001",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group4/experiments/20260424_151810_group4_peft_g4_lora_002",
+      "/home/tinsae_kiya_gedamu/final_project/outputs/group4/experiments/20260424_210406_group4_peft_g4_sft_012"
+    ],
+    "peft_artifacts_dir": "/home/tinsae_kiya_gedamu/final_project/group4_baseline/artifacts/peft_smoke",
+    "eval_entrypoint": "/home/tinsae_kiya_gedamu/final_project/group4_baseline/scripts/run_group4_eval.py"
+  },
+  "logs": {
+    "group1": "/home/tinsae_kiya_gedamu/final_project/logs/runs/20260423_043328_all_groups_subset10k_tpu.log",
+    "group2": "/home/tinsae_kiya_gedamu/final_project/logs/runs/20260423_142214_group2_tpu.log",
+    "group4": "/home/tinsae_kiya_gedamu/final_project/logs/runs/20260424_144442_group4_full.log"
+  }
+}
