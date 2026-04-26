@@ -51,13 +51,22 @@ summary_overwrite="${SUMMARY_OVERWRITE:-0}"
 eval_mode="${EVAL_MODE:-none}"  # none | human_pack | human_aggregate | api_judge
 relora_eval_out_dir_default="$repo_root/data/processed/subsets/subset_10000_seed42/eval/relora"
 relora_eval_out_dir="${RELORA_EVAL_OUT_DIR:-$relora_eval_out_dir_default}"
-relora_pred_json="${RELORA_PRED_JSON:-$relora_eval_out_dir/relora_prediction_samples.json}"
-relora_pred_md="${RELORA_PRED_MD:-$relora_eval_out_dir/relora_prediction_samples.md}"
-relora_generations_jsonl="${RELORA_GENERATIONS_JSONL:-$relora_eval_out_dir/relora_generations_filled.jsonl}"
+relora_manifest_json="${RELORA_MANIFEST_JSON:-$repo_root/artifacts/relora_smoke/stage1_manifest_smoke_group4.json}"
+relora_pred_json_default="$relora_eval_out_dir/relora_prediction_samples.json"
+relora_pred_md_default="$relora_eval_out_dir/relora_prediction_samples.md"
+relora_generations_default="$relora_eval_out_dir/relora_generations_filled.jsonl"
+relora_pred_json_small="$relora_eval_out_dir/relora_prediction_samples_small.json"
+relora_pred_md_small="$relora_eval_out_dir/relora_prediction_samples_small.md"
+relora_generations_small="$relora_eval_out_dir/relora_generations_filled_small.jsonl"
+relora_pred_json="${RELORA_PRED_JSON:-$relora_pred_json_default}"
+relora_pred_md="${RELORA_PRED_MD:-$relora_pred_md_default}"
+relora_generations_jsonl="${RELORA_GENERATIONS_JSONL:-$relora_generations_default}"
 baseline_method="${BASELINE_METHOD:-baseline}"
 candidate_methods="${CANDIDATE_METHODS:-}"
 max_requests="${MAX_REQUESTS:-0}"
-human_results_jsonl="${HUMAN_RESULTS_JSONL:-$relora_eval_out_dir/human_results_filled.jsonl}"
+human_results_jsonl_default="$relora_eval_out_dir/human_results_filled.jsonl"
+human_results_template_default="$relora_eval_out_dir/human_results_template.jsonl"
+human_results_jsonl="${HUMAN_RESULTS_JSONL:-$human_results_jsonl_default}"
 openai_model="${OPENAI_MODEL:-gpt-4.1-mini}"
 openai_api_key="${OPENAI_API_KEY:-}"
 update_results_manual="${UPDATE_RESULTS_MANUAL:-0}"
@@ -116,6 +125,7 @@ fi
   echo "summary_overwrite=$summary_overwrite"
   echo "eval_mode=$eval_mode"
   echo "relora_eval_out_dir=$relora_eval_out_dir"
+  echo "relora_manifest_json=$relora_manifest_json"
   echo "relora_pred_json=$relora_pred_json"
   echo "relora_pred_md=$relora_pred_md"
   echo "relora_generations_jsonl=$relora_generations_jsonl"
@@ -229,6 +239,31 @@ fi
 # 3) Optional ReLoRA eval pipeline in dedicated eval dir.
 mkdir -p "$relora_eval_out_dir"
 
+# Prefer lightweight "small" eval artifacts when available and not explicitly overridden.
+if [[ -z "${RELORA_GENERATIONS_JSONL:-}" && -f "$relora_generations_small" ]]; then
+  relora_generations_jsonl="$relora_generations_small"
+fi
+if [[ -z "${RELORA_PRED_JSON:-}" && -f "$relora_pred_json_small" ]]; then
+  relora_pred_json="$relora_pred_json_small"
+fi
+if [[ -z "${RELORA_PRED_MD:-}" && -f "$relora_pred_md_small" ]]; then
+  relora_pred_md="$relora_pred_md_small"
+fi
+if [[ -z "${HUMAN_RESULTS_JSONL:-}" ]]; then
+  if [[ -f "$human_results_jsonl_default" ]]; then
+    human_results_jsonl="$human_results_jsonl_default"
+  elif [[ -f "$human_results_template_default" ]]; then
+    human_results_jsonl="$human_results_template_default"
+  fi
+fi
+
+{
+  echo "resolved_relora_pred_json=$relora_pred_json"
+  echo "resolved_relora_pred_md=$relora_pred_md"
+  echo "resolved_relora_generations_jsonl=$relora_generations_jsonl"
+  echo "resolved_human_results_jsonl=$human_results_jsonl"
+} >> "$meta_file"
+
 need_eval_inputs=0
 case "$eval_mode" in
   human_pack|api_judge) need_eval_inputs=1 ;;
@@ -254,6 +289,7 @@ if [[ "$need_eval_inputs" == "1" ]]; then
   run_logged "relora_predictions" \
     "$pred_script" \
     --metrics-json "$repo_root"/artifacts/relora_smoke/g4_relora_*_metrics.json \
+    --manifest-json "$relora_manifest_json" \
     --max-samples "$max_rows" \
     --method-id-field experiment_id \
     --include-group1-baseline \
